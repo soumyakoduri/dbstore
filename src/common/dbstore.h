@@ -26,14 +26,14 @@ struct RGWOpParams {
 
 struct RGWOps {
 	class InsertUserOp *InsertUser;
-	class InsertBucketOp *InsertBucket;
-	class InsertObjectOp *InsertObject;
-	class ListUserOp *ListUser;
-	class ListBucketOp *ListBucket;
-	class ListObjectOp *ListObject;
 	class RemoveUserOp *RemoveUser;
+	class ListUserOp *ListUser;
+	class InsertBucketOp *InsertBucket;
 	class RemoveBucketOp *RemoveBucket;
+	class ListBucketOp *ListBucket;
+	class InsertObjectOp *InsertObject;
 	class RemoveObjectOp *RemoveObject;
+	class ListObjectOp *ListObject;
 };
 
 class RGWOp {
@@ -80,46 +80,10 @@ class InsertUserOp : public RGWOp {
 	string Schema(RGWOpParams *params);
 };
 
-class InsertBucketOp: public RGWOp {
-	private:
-	const string Query =
-	"INSERT INTO '{}' (BucketName, UserName) VALUES ({}, {})";
-
-	public:
-	string Schema(RGWOpParams *params);
-};
-
-class InsertObjectOp: public RGWOp {
-	private:
-	const string Query =
-	"INSERT INTO '{}' (BucketName, ObjectName) VALUES ({}, {})";
-
-	public:
-	string Schema(RGWOpParams *params);
-};
-
 class RemoveUserOp: public RGWOp {
 	private:
 	const string Query =
 	"DELETE from '{}' where UserName = {}";
-
-	public:
-	string Schema(RGWOpParams *params);
-};
-
-class RemoveBucketOp: public RGWOp {
-	private:
-	const string Query =
-	"DELETE from '{}' where BucketName = {}";
-
-	public:
-	string Schema(RGWOpParams *params);
-};
-
-class RemoveObjectOp: public RGWOp {
-	private:
-	const string Query =
-	"DELETE from '{}' where BucketName = {} and ObjectName = {}";
 
 	public:
 	string Schema(RGWOpParams *params);
@@ -134,6 +98,24 @@ class ListUserOp: public RGWOp {
 	string Schema(RGWOpParams *params);
 };
 
+class InsertBucketOp: public RGWOp {
+	private:
+	const string Query =
+	"INSERT INTO '{}' (BucketName, UserName) VALUES ({}, {})";
+
+	public:
+	string Schema(RGWOpParams *params);
+};
+
+class RemoveBucketOp: public RGWOp {
+	private:
+	const string Query =
+	"DELETE from '{}' where BucketName = {}";
+
+	public:
+	string Schema(RGWOpParams *params);
+};
+
 class ListBucketOp: public RGWOp {
 	private:
 	const string Query =
@@ -143,10 +125,28 @@ class ListBucketOp: public RGWOp {
 	string Schema(RGWOpParams *params);
 };
 
+class InsertObjectOp: public RGWOp {
+	private:
+	const string Query =
+	"INSERT INTO '{}' (BucketName, ObjectName) VALUES ({}, {})";
+
+	public:
+	string Schema(RGWOpParams *params);
+};
+
+class RemoveObjectOp: public RGWOp {
+	private:
+	const string Query =
+	"DELETE from '{}' where BucketName = {} and ObjectName = {}";
+
+	public:
+	string Schema(RGWOpParams *params);
+};
+
 class ListObjectOp: public RGWOp {
 	private:
 	const string Query =
-	"SELECT  * from '{}' where ObjectName = {}";
+	"SELECT  * from '{}' where BucketName = {} and ObjectName = {}";
 	// XXX: Include queries for specific bucket and user too
 
 	public:
@@ -169,6 +169,10 @@ class DBstore {
        			        {}
 
 	string getDBname();
+	string getUserTable();
+	string getBucketTable();
+	string getObjectTable();
+
 	struct RGWOps rgwops; // RGW operations, make it private?
 	void *db; // Backend database handle, make it private?
 
@@ -178,6 +182,7 @@ class DBstore {
 
         virtual void *openDB() { return NULL; }
         virtual int closeDB() { return 0; }
+	virtual int createTables() { return 0; }
 
         virtual int ListAllBuckets(RGWOpParams *params) = 0;
         virtual int ListAllUsers(RGWOpParams *params) = 0;

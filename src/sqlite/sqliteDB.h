@@ -34,6 +34,7 @@ class SQLiteDB : public DBstore, public RGWOp{
 	int Step(sqlite3_stmt *stmt);
 	int Reset(sqlite3_stmt *stmt);
 
+	int createTables();
 	int createBucketTable(RGWOpParams *params);
 	int createUserTable(RGWOpParams *params);
 	int createObjectTable(RGWOpParams *params);
@@ -60,32 +61,6 @@ class SQLInsertUser : public SQLiteDB, public InsertUserOp {
         int Bind(RGWOpParams *params);
 };
 
-class SQLInsertBucket : public SQLiteDB, public InsertBucketOp {
-	private:
-	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
-
-	public:
-	SQLInsertBucket(string tenant_name, class DBstore *dbi) :
-	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
-        int Prepare(RGWOpParams *params);
-        int Execute(RGWOpParams *params);
-        int Bind(RGWOpParams *params);
-};
-
-class SQLInsertObject : public SQLiteDB, public InsertObjectOp {
-	private:
-	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
-
-	public:
-	SQLInsertObject(string tenant_name, class DBstore *dbi) :
-	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
-        int Prepare(RGWOpParams *params);
-        int Execute(RGWOpParams *params);
-        int Bind(RGWOpParams *params);
-};
-
 class SQLRemoveUser : public SQLiteDB, public RemoveUserOp {
 	private:
 	sqlite3 **sdb = NULL;
@@ -93,32 +68,6 @@ class SQLRemoveUser : public SQLiteDB, public RemoveUserOp {
 
 	public:
 	SQLRemoveUser(string tenant_name, class DBstore *dbi) :
-	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
-        int Prepare(RGWOpParams *params);
-        int Execute(RGWOpParams *params);
-        int Bind(RGWOpParams *params);
-};
-
-class SQLRemoveBucket : public SQLiteDB, public RemoveBucketOp {
-	private:
-	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
-
-	public:
-	SQLRemoveBucket(string tenant_name, class DBstore *dbi) :
-	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
-        int Prepare(RGWOpParams *params);
-        int Execute(RGWOpParams *params);
-        int Bind(RGWOpParams *params);
-};
-
-class SQLRemoveObject : public SQLiteDB, public RemoveObjectOp {
-	private:
-	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
-
-	public:
-	SQLRemoveObject(string tenant_name, class DBstore *dbi) :
 	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
         int Prepare(RGWOpParams *params);
         int Execute(RGWOpParams *params);
@@ -138,6 +87,32 @@ class SQLListUser : public SQLiteDB, public ListUserOp {
         int Bind(RGWOpParams *params);
 };
 
+class SQLInsertBucket : public SQLiteDB, public InsertBucketOp {
+	private:
+	sqlite3 **sdb = NULL;
+	sqlite3_stmt *stmt; // Prepared statement
+
+	public:
+	SQLInsertBucket(string tenant_name, class DBstore *dbi) :
+	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+        int Prepare(RGWOpParams *params);
+        int Execute(RGWOpParams *params);
+        int Bind(RGWOpParams *params);
+};
+
+class SQLRemoveBucket : public SQLiteDB, public RemoveBucketOp {
+	private:
+	sqlite3 **sdb = NULL;
+	sqlite3_stmt *stmt; // Prepared statement
+
+	public:
+	SQLRemoveBucket(string tenant_name, class DBstore *dbi) :
+	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+        int Prepare(RGWOpParams *params);
+        int Execute(RGWOpParams *params);
+        int Bind(RGWOpParams *params);
+};
+
 class SQLListBucket : public SQLiteDB, public ListBucketOp {
 	private:
 	sqlite3 **sdb = NULL;
@@ -145,6 +120,32 @@ class SQLListBucket : public SQLiteDB, public ListBucketOp {
 
 	public:
 	SQLListBucket(string tenant_name, class DBstore *dbi) :
+	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+        int Prepare(RGWOpParams *params);
+        int Execute(RGWOpParams *params);
+        int Bind(RGWOpParams *params);
+};
+
+class SQLInsertObject : public SQLiteDB, public InsertObjectOp {
+	private:
+	sqlite3 **sdb = NULL;
+	sqlite3_stmt *stmt; // Prepared statement
+
+	public:
+	SQLInsertObject(string tenant_name, class DBstore *dbi) :
+	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+        int Prepare(RGWOpParams *params);
+        int Execute(RGWOpParams *params);
+        int Bind(RGWOpParams *params);
+};
+
+class SQLRemoveObject : public SQLiteDB, public RemoveObjectOp {
+	private:
+	sqlite3 **sdb = NULL;
+	sqlite3_stmt *stmt; // Prepared statement
+
+	public:
+	SQLRemoveObject(string tenant_name, class DBstore *dbi) :
 	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
         int Prepare(RGWOpParams *params);
         int Execute(RGWOpParams *params);

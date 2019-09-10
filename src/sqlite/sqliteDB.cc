@@ -3,6 +3,69 @@
 
 #include "sqliteDB.h"
 
+#define SQL_PREPARE(params, sdb, stmt, ret, Op) \
+do {						\
+	string schema;			   	\
+	schema = Schema(&params);	   	\
+					   	\
+	sqlite3_prepare_v2 (*sdb, schema.c_str(), \
+		            -1, &stmt , NULL);	\
+	if (!stmt) {				\
+	        printf("%s failed (%s) \n",	\
+			Op, sqlite3_errmsg(*sdb));\
+		ret = -1;			\
+		goto out;			\
+	}					\
+	ret = 0;				\
+} while(0);
+
+#define SQL_BIND_INDEX(stmt, index, str, sdb)	\
+do {						\
+	index = sqlite3_bind_parameter_index(stmt, str);     \
+							     \
+	if (index <=0)  {				     \
+	        printf("Failed to fetch %s index (%d), error(%s) \n", \
+			str, index, sqlite3_errmsg(*sdb));   \
+		rc = -1;				     \
+		goto out;				     \
+	}						     \
+}while(0);
+
+#define SQL_BIND_TEXT(stmt, index, str, sdb)			\
+do {								\
+	rc = sqlite3_bind_text(stmt, index, str, -1, SQLITE_STATIC); \
+								\
+	if (rc != SQLITE_OK) {					\
+	        printf("sqlite bind text failed for user(%s)"	\
+			"index (%d) with error(%s) \n",		\
+			str, index, sqlite3_errmsg(*sdb));	\
+		rc = -1;					\
+		goto out;					\
+	}							\
+}while(0);
+
+#define SQL_EXECUTE(params, stmt)		\
+do{						\
+	if (!stmt) {				\
+		ret = Prepare(params);		\
+	}					\
+						\
+	if (!stmt) {				\
+		goto out;			\
+	}					\
+						\
+	ret = Bind(params);			\
+	if (ret)				\
+		goto out;			\
+						\
+	ret = Step(stmt);			\
+						\
+	Reset(stmt);				\
+						\
+	if (ret)				\
+		goto out;			\
+}while(0);
+
 static int list_callback(void *None, int argc, char **argv, char **aname)
 {
         int i;
@@ -98,6 +161,39 @@ int SQLiteDB::exec(const char *schema,
         }
 	ret = 0;
 out:
+	return ret;
+}
+
+int SQLiteDB::createTables()
+{
+	int ret = -1;
+	int cu, cb, co = -1;
+	RGWOpParams params = {};
+
+	params.user_table = getUserTable();
+	params.bucket_table = getBucketTable();
+	params.object_table = getObjectTable();
+
+	if (cu = createUserTable(&params))
+		goto out;
+
+	if (cb = createBucketTable(&params))
+		goto out;
+
+	if (co = createObjectTable(&params))
+		goto out;
+
+	ret = 0;
+out:
+	if (ret) {
+		if (cu)
+			DeleteUserTable(&params);
+		if (cb)
+			DeleteBucketTable(&params);
+		if (co)
+			DeleteObjectTable(&params);
+	}
+
 	return ret;
 }
 
@@ -241,7 +337,6 @@ out:
 int SQLInsertUser::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	string schema;
 	struct RGWOpParams t_params = {};
 
 	if (!*sdb) {
@@ -252,13 +347,8 @@ int SQLInsertUser::Prepare(struct RGWOpParams *params)
 	t_params.user_table = params->user_table;
 	t_params.user_name = ":user";
 
-	schema = Schema(&t_params);
-
-	sqlite3_prepare_v2 (*sdb, schema.c_str(), -1, &stmt , NULL);
-
-	if (!stmt)
-	        printf("PrepateInsertUser failed (%s) \n", sqlite3_errmsg(*sdb));
-
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PrepareInsertUser");
 out:
 	return ret;
 }
@@ -268,52 +358,104 @@ int SQLInsertUser::Bind(struct RGWOpParams *params)
 	int index = -1;
 	int rc = 0;
 
-	index = sqlite3_bind_parameter_index(stmt, ":user");
+	SQL_BIND_INDEX(stmt, index, ":user", sdb);
 
-	if (index <=0)  {
-	        printf("Failed to fetch ':user' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
+	SQL_BIND_TEXT(stmt, index, params->user_name.c_str(), sdb);
 
-	rc = sqlite3_bind_text(stmt, index, params->user_name.c_str(), -1, SQLITE_STATIC);
-
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for user(%s) index (%d) with error(%s) \n",
-			params->user_name.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-
-	return 0;
+out:
+	return rc;
 }
 
 int SQLInsertUser::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	if (!stmt) {
-		ret = createUserTable(params);
+	SQL_EXECUTE(params, stmt);
+out:
+	return ret;
+}
 
-		if (ret)
-			return ret;
+int SQLRemoveUser::Prepare(struct RGWOpParams *params)
+{
+	int ret = -1;
+	string schema;
+	struct RGWOpParams t_params = {};
 
-		ret = Prepare(params);
+	if (!*sdb) {
+		printf("In SQLRemoveUser - no db\n");
+		goto out;
 	}
 
-	if (!stmt) {
-		return ret;
+	t_params.user_table = params->user_table;
+	t_params.user_name = ":user";
+
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PrepareRemoveUser");
+out:
+	return ret;
+}
+
+int SQLRemoveUser::Bind(struct RGWOpParams *params)
+{
+	int index = -1;
+	int rc = 0;
+
+	SQL_BIND_INDEX(stmt, index, ":user", sdb);
+
+	SQL_BIND_TEXT(stmt, index, params->user_name.c_str(), sdb);
+
+out:
+	return rc;
+}
+
+int SQLRemoveUser::Execute(struct RGWOpParams *params)
+{
+	int ret = -1;
+
+	SQL_EXECUTE(params, stmt);
+out:
+	return ret;
+}
+
+int SQLListUser::Prepare(struct RGWOpParams *params)
+{
+	int ret = -1;
+	string schema;
+	struct RGWOpParams t_params = {};
+
+	if (!*sdb) {
+		printf("In SQLListUser - no db\n");
+		goto out;
 	}
 
-	ret = Bind(params);
-	if (ret)
-		goto out;
+	t_params.user_table = params->user_table;
+	t_params.user_name = ":user";
 
-	ret = Step(stmt);
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PrepareListUser");
 
-	Reset(stmt);
+out:
+	return ret;
+}
 
-	if (ret)
-		goto out;
+int SQLListUser::Bind(struct RGWOpParams *params)
+{
+	int index = -1;
+	int rc = 0;
+
+	SQL_BIND_INDEX(stmt, index, ":user", sdb);
+
+	SQL_BIND_TEXT(stmt, index, params->user_name.c_str(), sdb);
+
+out:
+	return rc;
+}
+
+int SQLListUser::Execute(struct RGWOpParams *params)
+{
+	int ret = -1;
+
+	SQL_EXECUTE(params, stmt);
 out:
 	return ret;
 }
@@ -333,12 +475,8 @@ int SQLInsertBucket::Prepare(struct RGWOpParams *params)
 	t_params.user_name = ":user";
 	t_params.bucket_name = ":bucket";
 
-	schema = Schema(&t_params);
-
-	sqlite3_prepare_v2 (*sdb, schema.c_str(), -1, &stmt , NULL);
-
-	if (!stmt)
-	        printf("PrepateInsertBucket failed (%s) \n", sqlite3_errmsg(*sdb));
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PrepareInsertBucket");
 
 out:
 	return ret;
@@ -349,67 +487,109 @@ int SQLInsertBucket::Bind(struct RGWOpParams *params)
 	int index = -1;
 	int rc = 0;
 
-	index = sqlite3_bind_parameter_index(stmt, ":user");
+	SQL_BIND_INDEX(stmt, index, ":user", sdb);
 
-	if (index <=0)  {
-	        printf("Failed to fetch ':user' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
+	SQL_BIND_TEXT(stmt, index, params->user_name.c_str(), sdb);
 
-	rc = sqlite3_bind_text(stmt, index, params->user_name.c_str(), -1, SQLITE_STATIC);
+	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
 
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for user(%s) index (%d) with error(%s) \n",
-			params->user_name.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
+	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 
-	index = sqlite3_bind_parameter_index(stmt, ":bucket");
-
-	if (index <=0)  {
-	        printf("Failed to fetch ':bucket' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-
-	rc = sqlite3_bind_text(stmt, index, params->bucket_name.c_str(), -1, SQLITE_STATIC);
-
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for user(%s) index (%d) with error(%s) \n",
-			params->bucket_name.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-	return 0;
+out:
+	return rc;
 }
 
 int SQLInsertBucket::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	if (!stmt) {
-		ret = createBucketTable(params);
+	SQL_EXECUTE(params, stmt);
+out:
+	return ret;
+}
 
-		if (ret)
-			return ret;
+int SQLRemoveBucket::Prepare(struct RGWOpParams *params)
+{
+	int ret = -1;
+	struct RGWOpParams t_params = {};
+	string schema;
 
-		ret = Prepare(params);
+	if (!*sdb) {
+		printf("In SQLRemoveBucket - no db\n");
+		goto out;
 	}
 
-	if (!stmt) {
-		return ret;
+	t_params.bucket_table = params->bucket_table;
+	t_params.bucket_name = ":bucket";
+
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PrepareRemoveBucket");
+
+out:
+	return ret;
+}
+
+int SQLRemoveBucket::Bind(struct RGWOpParams *params)
+{
+	int index = -1;
+	int rc = 0;
+
+	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+
+	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
+
+out:
+	return rc;
+}
+
+int SQLRemoveBucket::Execute(struct RGWOpParams *params)
+{
+	int ret = -1;
+
+	SQL_EXECUTE(params, stmt);
+out:
+	return ret;
+}
+
+int SQLListBucket::Prepare(struct RGWOpParams *params)
+{
+	int ret = -1;
+	string schema;
+	struct RGWOpParams t_params = {};
+
+	if (!*sdb) {
+		printf("In SQLListBucket - no db\n");
+		goto out;
 	}
 
-	ret = Bind(params);
-	if (ret)
-		goto out;
+	t_params.bucket_table = params->bucket_table;
+	t_params.bucket_name = ":bucket";
 
-	ret = Step(stmt);
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PrepareListBucket");
 
-	Reset(stmt);
+out:
+	return ret;
+}
 
-	if (ret)
-		goto out;
+int SQLListBucket::Bind(struct RGWOpParams *params)
+{
+	int index = -1;
+	int rc = 0;
+
+	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+
+	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
+
+out:
+	return rc;
+}
+
+int SQLListBucket::Execute(struct RGWOpParams *params)
+{
+	int ret = -1;
+
+	SQL_EXECUTE(params, stmt);
 out:
 	return ret;
 }
@@ -429,12 +609,8 @@ int SQLInsertObject::Prepare(struct RGWOpParams *params)
 	t_params.bucket_name = ":bucket";
 	t_params.object = ":object";
 
-	schema = Schema(&t_params);
-
-	sqlite3_prepare_v2 (*sdb, schema.c_str(), -1, &stmt , NULL);
-
-	if (!stmt)
-	        printf("PrepateInsertObject failed (%s) \n", sqlite3_errmsg(*sdb));
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PrepareInsertObject");
 
 out:
 	return ret;
@@ -445,216 +621,23 @@ int SQLInsertObject::Bind(struct RGWOpParams *params)
 	int index = -1;
 	int rc = 0;
 
-	index = sqlite3_bind_parameter_index(stmt, ":object");
+	SQL_BIND_INDEX(stmt, index, ":object", sdb);
 
-	if (index <=0)  {
-	        printf("Failed to fetch ':object' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
+	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
 
-	rc = sqlite3_bind_text(stmt, index, params->object.c_str(), -1, SQLITE_STATIC);
+	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
 
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for object(%s) index (%d) with error(%s) \n",
-			params->object.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
+	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 
-	index = sqlite3_bind_parameter_index(stmt, ":bucket");
-
-	if (index <=0)  {
-	        printf("Failed to fetch ':bucket' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-
-	rc = sqlite3_bind_text(stmt, index, params->bucket_name.c_str(), -1, SQLITE_STATIC);
-
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for user(%s) index (%d) with error(%s) \n",
-			params->bucket_name.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-	return 0;
+out:
+	return rc;
 }
 
 int SQLInsertObject::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	if (!stmt) {
-		ret = createObjectTable(params);
-
-		if (ret)
-			return ret;
-
-		ret = Prepare(params);
-	}
-
-	if (!stmt) {
-		return ret;
-	}
-
-	ret = Bind(params);
-	if (ret)
-		goto out;
-
-	ret = Step(stmt);
-
-	Reset(stmt);
-
-	if (ret)
-		goto out;
-out:
-	return ret;
-}
-
-int SQLRemoveUser::Prepare(struct RGWOpParams *params)
-{
-	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
-
-	if (!*sdb) {
-		printf("In SQLRemoveUser - no db\n");
-		goto out;
-	}
-
-	t_params.user_table = params->user_table;
-	t_params.user_name = ":user";
-
-	schema = Schema(&t_params);
-
-	sqlite3_prepare_v2 (*sdb, schema.c_str(), -1, &stmt , NULL);
-
-	if (!stmt)
-	        printf("PrepateRemoveUser failed (%s) \n", sqlite3_errmsg(*sdb));
-
-out:
-	return ret;
-}
-
-int SQLRemoveUser::Bind(struct RGWOpParams *params)
-{
-	int index = -1;
-	int rc = 0;
-
-	index = sqlite3_bind_parameter_index(stmt, ":user");
-
-	if (index <=0)  {
-	        printf("Failed to fetch ':user' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-
-	rc = sqlite3_bind_text(stmt, index, params->user_name.c_str(), -1, SQLITE_STATIC);
-
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for user(%s) index (%d) with error(%s) \n",
-			params->user_name.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-
-	return 0;
-}
-
-int SQLRemoveUser::Execute(struct RGWOpParams *params)
-{
-	int ret = -1;
-
-	if (!stmt) {
-		ret = Prepare(params);
-	}
-
-	if (!stmt) {
-		return ret;
-	}
-
-	ret = Bind(params);
-	if (ret)
-		goto out;
-
-	ret = Step(stmt);
-
-	Reset(stmt);
-
-	if (ret)
-		goto out;
-out:
-	return ret;
-}
-
-int SQLRemoveBucket::Prepare(struct RGWOpParams *params)
-{
-	int ret = -1;
-	struct RGWOpParams t_params = {};
-	string schema;
-
-	if (!*sdb) {
-		printf("In SQLRemoveBucket - no db\n");
-		goto out;
-	}
-
-	t_params.bucket_table = params->bucket_table;
-	t_params.bucket_name = ":bucket";
-
-	schema = Schema(&t_params);
-
-	sqlite3_prepare_v2 (*sdb, schema.c_str(), -1, &stmt , NULL);
-
-	if (!stmt)
-	        printf("PrepateRemoveBucket failed (%s) \n", sqlite3_errmsg(*sdb));
-
-out:
-	return ret;
-}
-
-int SQLRemoveBucket::Bind(struct RGWOpParams *params)
-{
-	int index = -1;
-	int rc = 0;
-
-	index = sqlite3_bind_parameter_index(stmt, ":bucket");
-
-	if (index <=0)  {
-	        printf("Failed to fetch ':bucket' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-
-	rc = sqlite3_bind_text(stmt, index, params->bucket_name.c_str(), -1, SQLITE_STATIC);
-
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for bucket(%s) index (%d) with error(%s) \n",
-			params->bucket_name.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-	return 0;
-}
-
-int SQLRemoveBucket::Execute(struct RGWOpParams *params)
-{
-	int ret = -1;
-
-	if (!stmt) {
-		ret = Prepare(params);
-	}
-
-	if (!stmt) {
-		return ret;
-	}
-
-	ret = Bind(params);
-	if (ret)
-		goto out;
-
-	ret = Step(stmt);
-
-	Reset(stmt);
-
-	if (ret)
-		goto out;
+	SQL_EXECUTE(params, stmt);
 out:
 	return ret;
 }
@@ -674,12 +657,8 @@ int SQLRemoveObject::Prepare(struct RGWOpParams *params)
 	t_params.bucket_name = ":bucket";
 	t_params.object = ":object";
 
-	schema = Schema(&t_params);
-
-	sqlite3_prepare_v2 (*sdb, schema.c_str(), -1, &stmt , NULL);
-
-	if (!stmt)
-	        printf("PrepateRemoveObject failed (%s) \n", sqlite3_errmsg(*sdb));
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PrepareRemoveObject");
 
 out:
 	return ret;
@@ -690,222 +669,23 @@ int SQLRemoveObject::Bind(struct RGWOpParams *params)
 	int index = -1;
 	int rc = 0;
 
-	index = sqlite3_bind_parameter_index(stmt, ":object");
+	SQL_BIND_INDEX(stmt, index, ":object", sdb);
 
-	if (index <=0)  {
-	        printf("Failed to fetch ':object' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
+	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
 
-	rc = sqlite3_bind_text(stmt, index, params->object.c_str(), -1, SQLITE_STATIC);
+	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
 
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for object(%s) index (%d) with error(%s) \n",
-			params->object.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
+	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 
-	index = sqlite3_bind_parameter_index(stmt, ":bucket");
-
-	if (index <=0)  {
-	        printf("Failed to fetch ':bucket' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-
-	rc = sqlite3_bind_text(stmt, index, params->bucket_name.c_str(), -1, SQLITE_STATIC);
-
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for user(%s) index (%d) with error(%s) \n",
-			params->bucket_name.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-	return 0;
+out:
+	return rc;
 }
 
 int SQLRemoveObject::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	if (!stmt) {
-		ret = Prepare(params);
-	}
-
-	if (!stmt) {
-		return ret;
-	}
-
-	ret = Bind(params);
-	if (ret)
-		goto out;
-
-	ret = Step(stmt);
-
-	Reset(stmt);
-
-	if (ret)
-		goto out;
-out:
-	return ret;
-}
-
-int SQLListUser::Prepare(struct RGWOpParams *params)
-{
-	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
-
-	if (!*sdb) {
-		printf("In SQLListUser - no db\n");
-		goto out;
-	}
-
-	t_params.user_table = params->user_table;
-	t_params.user_name = ":user";
-
-	schema = Schema(&t_params);
-
-	sqlite3_prepare_v2 (*sdb, schema.c_str(), -1, &stmt , NULL);
-
-	if (!stmt)
-	        printf("PrepateListUser failed (%s) \n", sqlite3_errmsg(*sdb));
-
-out:
-	return ret;
-}
-
-int SQLListUser::Bind(struct RGWOpParams *params)
-{
-	int index = -1;
-	int rc = 0;
-
-	index = sqlite3_bind_parameter_index(stmt, ":user");
-
-	if (index <=0)  {
-	        printf("Failed to fetch ':user' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-
-	rc = sqlite3_bind_text(stmt, index, params->user_name.c_str(), -1, SQLITE_STATIC);
-
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for user(%s) index (%d) with error(%s) \n",
-			params->user_name.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-
-	return 0;
-}
-
-int SQLListUser::Execute(struct RGWOpParams *params)
-{
-	int ret = -1;
-
-	if (!stmt) {
-		ret = Prepare(params);
-	}
-
-	if (!stmt) {
-		return ret;
-	}
-
-	ret = Bind(params);
-	if (ret)
-		goto out;
-
-	ret = Step(stmt);
-
-	if (!ret) {
-                printf("%d, %s \n", sqlite3_column_int(stmt, 0),
-			         	sqlite3_column_text(stmt, 1));
-	}
-
-	Reset(stmt);
-
-	if (ret)
-		goto out;
-out:
-	return ret;
-}
-
-int SQLListBucket::Prepare(struct RGWOpParams *params)
-{
-	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
-
-	if (!*sdb) {
-		printf("In SQLListBucket - no db\n");
-		goto out;
-	}
-
-	t_params.bucket_table = params->bucket_table;
-	t_params.bucket_name = ":bucket";
-
-	schema = Schema(&t_params);
-
-	sqlite3_prepare_v2 (*sdb, schema.c_str(), -1, &stmt , NULL);
-
-	if (!stmt)
-	        printf("PrepateListBucket failed (%s) \n", sqlite3_errmsg(*sdb));
-
-out:
-	return ret;
-}
-
-int SQLListBucket::Bind(struct RGWOpParams *params)
-{
-	int index = -1;
-	int rc = 0;
-
-	index = sqlite3_bind_parameter_index(stmt, ":bucket");
-
-	if (index <=0)  {
-	        printf("Failed to fetch ':bucket' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-
-	rc = sqlite3_bind_text(stmt, index, params->bucket_name.c_str(), -1, SQLITE_STATIC);
-
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for bucket(%s) index (%d) with error(%s) \n",
-			params->bucket_name.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-	return 0;
-}
-
-int SQLListBucket::Execute(struct RGWOpParams *params)
-{
-	int ret = -1;
-
-	if (!stmt) {
-		ret = Prepare(params);
-	}
-
-	if (!stmt) {
-		return ret;
-	}
-
-	ret = Bind(params);
-	if (ret)
-		goto out;
-
-	ret = Step(stmt);
-
-	if (!ret) {
-                printf("%d, %s, %s \n", sqlite3_column_int(stmt, 0),
-			         	sqlite3_column_text(stmt, 1),
-			       	        sqlite3_column_text(stmt, 2));
-	}
-
-	Reset(stmt);
-
-	if (ret)
-		goto out;
+	SQL_EXECUTE(params, stmt);
 out:
 	return ret;
 }
@@ -922,14 +702,11 @@ int SQLListObject::Prepare(struct RGWOpParams *params)
 	}
 
 	t_params.object_table = params->object_table;
+	t_params.bucket_name = ":bucket";
 	t_params.object = ":object";
 
-	schema = Schema(&t_params);
-
-	sqlite3_prepare_v2 (*sdb, schema.c_str(), -1, &stmt , NULL);
-
-	if (!stmt)
-	        printf("PrepateListObject failed (%s) \n", sqlite3_errmsg(*sdb));
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PrepareListObject");
 
 out:
 	return ret;
@@ -940,52 +717,23 @@ int SQLListObject::Bind(struct RGWOpParams *params)
 	int index = -1;
 	int rc = 0;
 
-	index = sqlite3_bind_parameter_index(stmt, ":object");
+	SQL_BIND_INDEX(stmt, index, ":object", sdb);
 
-	if (index <=0)  {
-	        printf("Failed to fetch ':object' index (%d), error(%s) \n",
-			index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
+	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
 
-	rc = sqlite3_bind_text(stmt, index, params->object.c_str(), -1, SQLITE_STATIC);
+	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
 
-	if (rc != SQLITE_OK) {
-	        printf("sqlite bind text failed for object(%s) index (%d) with error(%s) \n",
-			params->object.c_str(), index, sqlite3_errmsg(*sdb));
-		return -1;
-	}
-	return 0;
+	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
+
+out:
+	return rc;
 }
 
 int SQLListObject::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	if (!stmt) {
-		ret = Prepare(params);
-	}
-
-	if (!stmt) {
-		return ret;
-	}
-
-	ret = Bind(params);
-	if (ret)
-		goto out;
-
-	ret = Step(stmt);
-
-	if (!ret) {
-                printf("%d, %s, %s \n", sqlite3_column_int(stmt, 0),
-			         	sqlite3_column_text(stmt, 1),
-			       	        sqlite3_column_text(stmt, 2));
-	}
-
-	Reset(stmt);
-
-	if (ret)
-		goto out;
+	SQL_EXECUTE(params, stmt);
 out:
 	return ret;
 }

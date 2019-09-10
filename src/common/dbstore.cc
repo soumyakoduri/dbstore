@@ -9,6 +9,18 @@ string DBstore::getDBname() {
 	return tenant + ".db";
 }
 
+string DBstore::getUserTable() {
+	return user_table;
+}
+
+string DBstore::getBucketTable() {
+	return bucket_table;
+}
+
+string DBstore::getObjectTable() {
+	return object_table;
+}
+
 string RGWOp::CreateTableSchema(string type, RGWOpParams *params) {
 	if (!type.compare("User"))
 		return fmt::format(CreateUserTableQ.c_str(),
@@ -46,34 +58,6 @@ string InsertUserOp::Schema(RGWOpParams *params) {
 		 params->user_table.c_str(), user_name.c_str());
 }
 
-string InsertBucketOp::Schema(RGWOpParams *params) {
-	string bucket_table, bucket, user;
-
-	if (!params)
-		return NULL;
-
-	bucket_table = params->bucket_table;
-	bucket = params->bucket_name;
-	user = params->user_name;
-
-	return fmt::format(Query.c_str(),
-		 bucket_table.c_str(), bucket.c_str(), user.c_str());
-}
-
-string InsertObjectOp::Schema(RGWOpParams *params) {
-	string object_table, object, bucket_name;
-
-	if (!params)
-		return NULL;
-
-	object_table = params->object_table;
-	object = params->object;
-	bucket_name = params->bucket_name;
-
-	return fmt::format(Query.c_str(),
-		 object_table.c_str(), bucket_name.c_str(), object.c_str());
-}
-
 string RemoveUserOp::Schema(RGWOpParams *params) {
 
 	string user_table, user;
@@ -86,31 +70,6 @@ string RemoveUserOp::Schema(RGWOpParams *params) {
 
 	return fmt::format(Query.c_str(),
 		 user_table.c_str(), user.c_str());
-}
-
-string RemoveBucketOp::Schema(RGWOpParams *params) {
-	string bucket_table, bucket;
-
-	if (!params)
-		return NULL;
-
-	bucket_table = params->bucket_table;
-	bucket = params->bucket_name;
-
-	return fmt::format(Query.c_str(), bucket_table.c_str(), bucket.c_str());
-}
-
-string RemoveObjectOp::Schema(RGWOpParams *params) {
-	string object_table, object, bucket;
-
-	if (!params)
-		return NULL;
-
-	object_table = params->object_table;
-	object = params->object;
-	bucket = params->bucket_name;
-
-	return fmt::format(Query.c_str(), object_table.c_str(), bucket.c_str(), object.c_str());
 }
 
 string ListUserOp::Schema(RGWOpParams *params) {
@@ -127,6 +86,32 @@ string ListUserOp::Schema(RGWOpParams *params) {
 		 user_table.c_str(), user.c_str());
 }
 
+string InsertBucketOp::Schema(RGWOpParams *params) {
+	string bucket_table, bucket, user;
+
+	if (!params)
+		return NULL;
+
+	bucket_table = params->bucket_table;
+	bucket = params->bucket_name;
+	user = params->user_name;
+
+	return fmt::format(Query.c_str(),
+		 bucket_table.c_str(), bucket.c_str(), user.c_str());
+}
+
+string RemoveBucketOp::Schema(RGWOpParams *params) {
+	string bucket_table, bucket;
+
+	if (!params)
+		return NULL;
+
+	bucket_table = params->bucket_table;
+	bucket = params->bucket_name;
+
+	return fmt::format(Query.c_str(), bucket_table.c_str(), bucket.c_str());
+}
+
 string ListBucketOp::Schema(RGWOpParams *params) {
 	string bucket_table, bucket;
 
@@ -139,16 +124,44 @@ string ListBucketOp::Schema(RGWOpParams *params) {
 	return fmt::format(Query.c_str(), bucket_table.c_str(), bucket.c_str());
 }
 
-string ListObjectOp::Schema(RGWOpParams *params) {
-	string object_table, object;
+string InsertObjectOp::Schema(RGWOpParams *params) {
+	string object_table, object, bucket_name;
 
 	if (!params)
 		return NULL;
 
 	object_table = params->object_table;
 	object = params->object;
+	bucket_name = params->bucket_name;
 
-	return fmt::format(Query.c_str(), object_table.c_str(), object.c_str());
+	return fmt::format(Query.c_str(),
+		 object_table.c_str(), bucket_name.c_str(), object.c_str());
+}
+
+string RemoveObjectOp::Schema(RGWOpParams *params) {
+	string object_table, object, bucket;
+
+	if (!params)
+		return NULL;
+
+	object_table = params->object_table;
+	object = params->object;
+	bucket = params->bucket_name;
+
+	return fmt::format(Query.c_str(), object_table.c_str(), bucket.c_str(), object.c_str());
+}
+
+string ListObjectOp::Schema(RGWOpParams *params) {
+	string bucket, object_table, object;
+
+	if (!params)
+		return NULL;
+
+	object_table = params->object_table;
+	object = params->object;
+	bucket = params->bucket_name;
+
+	return fmt::format(Query.c_str(), object_table.c_str(), bucket.c_str(), object.c_str());
 }
 
 RGWOp * DBstore::getRGWOp(string Op)
