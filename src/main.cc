@@ -11,14 +11,15 @@
 void initialize_RGWOps (string tenant, class DBstore *db)
 {
 #ifdef SQLITE_ENABLED
+	(void)db->createTables();
 	db->rgwops.InsertUser = new SQLInsertUser(tenant, db);
-	db->rgwops.InsertBucket = new SQLInsertBucket(tenant, db);
-	db->rgwops.InsertObject = new SQLInsertObject(tenant, db);
 	db->rgwops.RemoveUser = new SQLRemoveUser(tenant, db);
-	db->rgwops.RemoveBucket = new SQLRemoveBucket(tenant, db);
-	db->rgwops.RemoveObject = new SQLRemoveObject(tenant, db);
 	db->rgwops.ListUser = new SQLListUser(tenant, db);
+	db->rgwops.InsertBucket = new SQLInsertBucket(tenant, db);
+	db->rgwops.RemoveBucket = new SQLRemoveBucket(tenant, db);
 	db->rgwops.ListBucket = new SQLListBucket(tenant, db);
+	db->rgwops.InsertObject = new SQLInsertObject(tenant, db);
+	db->rgwops.RemoveObject = new SQLRemoveObject(tenant, db);
 	db->rgwops.ListObject = new SQLListObject(tenant, db);
 #else
 	db->rgwops.InsertUser = NULL;
