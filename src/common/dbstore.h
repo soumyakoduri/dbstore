@@ -40,20 +40,18 @@ class RGWOp {
 	private:
 	const string CreateUserTableQ =
 		"CREATE TABLE IF NOT EXISTS '{}' (	\
-			UserID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-			UserName TEXT NOT NULL UNIQUE \n);";
+			UserName TEXT PRIMARY KEY NOT NULL UNIQUE \n);";
 	const string CreateBucketTableQ =
 		"CREATE TABLE IF NOT EXISTS '{}' ( \
-			BucketID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-			BucketName TEXT NOT NULL UNIQUE , \
+			BucketName TEXT PRIMARY KEY NOT NULL UNIQUE , \
 			UserName TEXT NOT NULL, \
 			FOREIGN KEY (UserName) \
 				REFERENCES '{}' (UserName) ON DELETE CASCADE ON UPDATE CASCADE \n);";
 	const string CreateObjectTableQ =
 		"CREATE TABLE IF NOT EXISTS '{}' ( \
-			ObjectID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
 			BucketName TEXT NOT NULL , \
 			ObjectName TEXT NOT NULL , \
+			PRIMARY KEY (BucketName, ObjectName), \
 			FOREIGN KEY (BucketName) \
 				REFERENCES '{}' (BucketName) ON DELETE CASCADE ON UPDATE CASCADE \n);";
 
