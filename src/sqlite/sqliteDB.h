@@ -31,7 +31,7 @@ class SQLiteDB : public DBstore, public RGWOp{
 		 int (*callback)(void*,int,char**,char**));
 	void *openDB();
 	int closeDB();
-	int Step(sqlite3_stmt *stmt);
+	int Step(sqlite3_stmt *stmt, int (*cbk)(sqlite3_stmt *stmt));
 	int Reset(sqlite3_stmt *stmt);
 
 	int createTables();
@@ -51,7 +51,7 @@ class SQLiteDB : public DBstore, public RGWOp{
 class SQLInsertUser : public SQLiteDB, public InsertUserOp {
 	private:
 	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
+	sqlite3_stmt *stmt = NULL; // Prepared statement
 
 	public:
 	SQLInsertUser(string tenant_name, class DBstore *dbi) :
@@ -64,7 +64,7 @@ class SQLInsertUser : public SQLiteDB, public InsertUserOp {
 class SQLRemoveUser : public SQLiteDB, public RemoveUserOp {
 	private:
 	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
+	sqlite3_stmt *stmt = NULL; // Prepared statement
 
 	public:
 	SQLRemoveUser(string tenant_name, class DBstore *dbi) :
@@ -77,7 +77,7 @@ class SQLRemoveUser : public SQLiteDB, public RemoveUserOp {
 class SQLListUser : public SQLiteDB, public ListUserOp {
 	private:
 	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
+	sqlite3_stmt *stmt = NULL; // Prepared statement
 
 	public:
 	SQLListUser(string tenant_name, class DBstore *dbi) :
@@ -90,7 +90,7 @@ class SQLListUser : public SQLiteDB, public ListUserOp {
 class SQLInsertBucket : public SQLiteDB, public InsertBucketOp {
 	private:
 	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
+	sqlite3_stmt *stmt = NULL; // Prepared statement
 
 	public:
 	SQLInsertBucket(string tenant_name, class DBstore *dbi) :
@@ -103,7 +103,7 @@ class SQLInsertBucket : public SQLiteDB, public InsertBucketOp {
 class SQLRemoveBucket : public SQLiteDB, public RemoveBucketOp {
 	private:
 	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
+	sqlite3_stmt *stmt = NULL; // Prepared statement
 
 	public:
 	SQLRemoveBucket(string tenant_name, class DBstore *dbi) :
@@ -116,7 +116,7 @@ class SQLRemoveBucket : public SQLiteDB, public RemoveBucketOp {
 class SQLListBucket : public SQLiteDB, public ListBucketOp {
 	private:
 	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
+	sqlite3_stmt *stmt = NULL; // Prepared statement
 
 	public:
 	SQLListBucket(string tenant_name, class DBstore *dbi) :
@@ -129,7 +129,7 @@ class SQLListBucket : public SQLiteDB, public ListBucketOp {
 class SQLInsertObject : public SQLiteDB, public InsertObjectOp {
 	private:
 	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
+	sqlite3_stmt *stmt = NULL; // Prepared statement
 
 	public:
 	SQLInsertObject(string tenant_name, class DBstore *dbi) :
@@ -142,7 +142,7 @@ class SQLInsertObject : public SQLiteDB, public InsertObjectOp {
 class SQLRemoveObject : public SQLiteDB, public RemoveObjectOp {
 	private:
 	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
+	sqlite3_stmt *stmt = NULL; // Prepared statement
 
 	public:
 	SQLRemoveObject(string tenant_name, class DBstore *dbi) :
@@ -155,7 +155,7 @@ class SQLRemoveObject : public SQLiteDB, public RemoveObjectOp {
 class SQLListObject : public SQLiteDB, public ListObjectOp {
 	private:
 	sqlite3 **sdb = NULL;
-	sqlite3_stmt *stmt; // Prepared statement
+	sqlite3_stmt *stmt = NULL; // Prepared statement
 
 	public:
 	SQLListObject(string tenant_name, class DBstore *dbi) :

@@ -44,7 +44,7 @@ do {								\
 	}							\
 }while(0);
 
-#define SQL_EXECUTE(params, stmt)		\
+#define SQL_EXECUTE(params, stmt, cbk, args...) \
 do{						\
 	if (!stmt) {				\
 		ret = Prepare(params);		\
@@ -58,7 +58,7 @@ do{						\
 	if (ret)				\
 		goto out;			\
 						\
-	ret = Step(stmt);			\
+	ret = Step(stmt, cbk);			\
 						\
 	Reset(stmt);				\
 						\
@@ -73,6 +73,36 @@ static int list_callback(void *None, int argc, char **argv, char **aname)
                 printf("%s = %s \n", aname[i], argv[i]? argv[i] : "NULL");
         }
         return 0;
+}
+
+
+static int list_user(sqlite3_stmt *stmt) {
+	if (!stmt)
+		return -1;
+
+	cout<<sqlite3_column_text(stmt, 0)<<"\n";
+
+	return 0;
+}
+
+static int list_bucket(sqlite3_stmt *stmt) {
+	if (!stmt)
+		return -1;
+
+	cout<<sqlite3_column_text(stmt, 0)<<", ";
+	cout<<sqlite3_column_text(stmt, 1)<<"\n";
+
+	return 0;
+}
+
+static int list_object(sqlite3_stmt *stmt) {
+	if (!stmt)
+		return -1;
+
+	cout<<sqlite3_column_text(stmt, 0)<<", ";
+	cout<<sqlite3_column_text(stmt, 1)<<"\n";
+
+	return 0;
 }
 
 void *SQLiteDB::openDB()
@@ -127,7 +157,7 @@ out:
 	return ret;
 }
 
-int SQLiteDB::Step(sqlite3_stmt *stmt)
+int SQLiteDB::Step(sqlite3_stmt *stmt, int (*cbk)(sqlite3_stmt *stmt))
 {
 	int ret = -1;
 
@@ -139,6 +169,9 @@ int SQLiteDB::Step(sqlite3_stmt *stmt)
 	if ((ret != SQLITE_DONE) && (ret != SQLITE_ROW)) {
 	        printf("sqlite step failed (%s) \n", sqlite3_errmsg(db));
 		return -1;
+	} else { //should we check only for SQLITE_ROW ?
+		if (cbk)
+			(*cbk)(stmt);
 	}
 
 	return 0;
@@ -370,7 +403,7 @@ int SQLInsertUser::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	SQL_EXECUTE(params, stmt);
+	SQL_EXECUTE(params, stmt, NULL);
 out:
 	return ret;
 }
@@ -412,7 +445,7 @@ int SQLRemoveUser::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	SQL_EXECUTE(params, stmt);
+	SQL_EXECUTE(params, stmt, NULL);
 out:
 	return ret;
 }
@@ -433,7 +466,6 @@ int SQLListUser::Prepare(struct RGWOpParams *params)
 
 	SQL_PREPARE(t_params, sdb, stmt, ret,
 		    "PrepareListUser");
-
 out:
 	return ret;
 }
@@ -446,7 +478,6 @@ int SQLListUser::Bind(struct RGWOpParams *params)
 	SQL_BIND_INDEX(stmt, index, ":user", sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->user_name.c_str(), sdb);
-
 out:
 	return rc;
 }
@@ -455,7 +486,7 @@ int SQLListUser::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	SQL_EXECUTE(params, stmt);
+	SQL_EXECUTE(params, stmt, list_user);
 out:
 	return ret;
 }
@@ -503,7 +534,7 @@ int SQLInsertBucket::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	SQL_EXECUTE(params, stmt);
+	SQL_EXECUTE(params, stmt, NULL);
 out:
 	return ret;
 }
@@ -546,7 +577,7 @@ int SQLRemoveBucket::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	SQL_EXECUTE(params, stmt);
+	SQL_EXECUTE(params, stmt, NULL);
 out:
 	return ret;
 }
@@ -589,7 +620,7 @@ int SQLListBucket::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	SQL_EXECUTE(params, stmt);
+	SQL_EXECUTE(params, stmt, list_bucket);
 out:
 	return ret;
 }
@@ -637,7 +668,7 @@ int SQLInsertObject::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	SQL_EXECUTE(params, stmt);
+	SQL_EXECUTE(params, stmt, NULL);
 out:
 	return ret;
 }
@@ -685,7 +716,7 @@ int SQLRemoveObject::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	SQL_EXECUTE(params, stmt);
+	SQL_EXECUTE(params, stmt, NULL);
 out:
 	return ret;
 }
@@ -733,7 +764,7 @@ int SQLListObject::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
 
-	SQL_EXECUTE(params, stmt);
+	SQL_EXECUTE(params, stmt, list_object);
 out:
 	return ret;
 }
