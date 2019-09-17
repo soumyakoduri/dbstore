@@ -15,6 +15,8 @@ cd build
 
 cmake ../
 
+[To enable debug symbols, pass "-DDEBUG_SYMS=ON" option to cmake]
+
 make
 
 
