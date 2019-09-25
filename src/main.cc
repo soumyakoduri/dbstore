@@ -21,6 +21,9 @@ void initialize_RGWOps (string tenant, class DBstore *db)
 	db->rgwops.InsertObject = new SQLInsertObject(tenant, db);
 	db->rgwops.RemoveObject = new SQLRemoveObject(tenant, db);
 	db->rgwops.ListObject = new SQLListObject(tenant, db);
+	db->rgwops.PutObjectData = new SQLPutObjectData(tenant, db);
+	db->rgwops.GetObjectData = new SQLGetObjectData(tenant, db);
+	db->rgwops.DeleteObjectData = new SQLDeleteObjectData(tenant, db);
 #else
 	db->rgwops.InsertUser = NULL;
 #endif
@@ -76,6 +79,22 @@ int main(int argc, char *argv[])
 	db->ProcessOp("InsertObject", &params);
 	params.object = objectb2;
 	db->ProcessOp("InsertObject", &params);
+
+	params.offset = 0;
+	params.data = "Hello World \0";
+	params.datalen = params.data.length();
+	db->ProcessOp("PutObjectData", &params);
+
+	params.offset = 20;
+	params.data = "Hi There \0";
+	params.datalen = params.data.length();
+	db->ProcessOp("PutObjectData", &params);
+
+	db->ProcessOp("GetObjectData", &params);
+
+	db->ProcessOp("DeleteObjectData", &params);
+
+	db->ProcessOp("GetObjectData", &params);
 
 	params.user_name = user2;
 	db->ProcessOp("InsertUser", &params);

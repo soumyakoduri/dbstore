@@ -38,10 +38,12 @@ class SQLiteDB : public DBstore, public RGWOp{
 	int createBucketTable(RGWOpParams *params);
 	int createUserTable(RGWOpParams *params);
 	int createObjectTable(RGWOpParams *params);
+	int createObjectDataTable(RGWOpParams *params);
 
 	int DeleteBucketTable(RGWOpParams *params);
 	int DeleteUserTable(RGWOpParams *params);
 	int DeleteObjectTable(RGWOpParams *params);
+	int DeleteObjectDataTable(RGWOpParams *params);
 
 	int ListAllBuckets(RGWOpParams *params);
 	int ListAllUsers(RGWOpParams *params);
@@ -159,6 +161,45 @@ class SQLListObject : public SQLiteDB, public ListObjectOp {
 
 	public:
 	SQLListObject(string tenant_name, class DBstore *dbi) :
+	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+        int Prepare(RGWOpParams *params);
+        int Execute(RGWOpParams *params);
+        int Bind(RGWOpParams *params);
+};
+
+class SQLPutObjectData : public SQLiteDB, public PutObjectDataOp {
+	private:
+	sqlite3 **sdb = NULL;
+	sqlite3_stmt *stmt = NULL; // Prepared statement
+
+	public:
+	SQLPutObjectData(string tenant_name, class DBstore *dbi) :
+	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+        int Prepare(RGWOpParams *params);
+        int Execute(RGWOpParams *params);
+        int Bind(RGWOpParams *params);
+};
+
+class SQLGetObjectData : public SQLiteDB, public GetObjectDataOp {
+	private:
+	sqlite3 **sdb = NULL;
+	sqlite3_stmt *stmt = NULL; // Prepared statement
+
+	public:
+	SQLGetObjectData(string tenant_name, class DBstore *dbi) :
+	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+        int Prepare(RGWOpParams *params);
+        int Execute(RGWOpParams *params);
+        int Bind(RGWOpParams *params);
+};
+
+class SQLDeleteObjectData : public SQLiteDB, public DeleteObjectDataOp {
+	private:
+	sqlite3 **sdb = NULL;
+	sqlite3_stmt *stmt = NULL; // Prepared statement
+
+	public:
+	SQLDeleteObjectData(string tenant_name, class DBstore *dbi) :
 	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
         int Prepare(RGWOpParams *params);
         int Execute(RGWOpParams *params);

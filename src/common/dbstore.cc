@@ -21,6 +21,10 @@ string DBstore::getObjectTable() {
 	return object_table;
 }
 
+string DBstore::getObjectDataTable() {
+	return objectdata_table;
+}
+
 string RGWOp::CreateTableSchema(string type, RGWOpParams *params) {
 	if (!type.compare("User"))
 		return fmt::format(CreateUserTableQ.c_str(),
@@ -33,6 +37,10 @@ string RGWOp::CreateTableSchema(string type, RGWOpParams *params) {
 		return fmt::format(CreateObjectTableQ.c_str(),
 			           params->object_table.c_str(),
 				   params->bucket_table.c_str());
+	if (!type.compare("ObjectData"))
+		return fmt::format(CreateObjectDataTableQ.c_str(),
+			           params->objectdata_table.c_str(),
+				   params->object_table.c_str());
 
 	return NULL;
 }
@@ -164,6 +172,52 @@ string ListObjectOp::Schema(RGWOpParams *params) {
 	return fmt::format(Query.c_str(), object_table.c_str(), bucket.c_str(), object.c_str());
 }
 
+string PutObjectDataOp::Schema(RGWOpParams *params) {
+	string objectdata_table, object, bucket_name;
+	size_t offset, datalen;
+	string data;
+
+	if (!params)
+		return NULL;
+
+	objectdata_table = params->objectdata_table;
+	object = params->object;
+	bucket_name = params->bucket_name;
+	data = params->data;
+
+	return fmt::format(Query.c_str(),
+		 objectdata_table.c_str(), bucket_name.c_str(), object.c_str(),
+		 ":offset", ":data", ":datalen");
+}
+
+string GetObjectDataOp::Schema(RGWOpParams *params) {
+	string objectdata_table, object, bucket_name;
+
+	if (!params)
+		return NULL;
+
+	objectdata_table = params->objectdata_table;
+	object = params->object;
+	bucket_name = params->bucket_name;
+
+	return fmt::format(Query.c_str(),
+		 objectdata_table.c_str(), bucket_name.c_str(), object.c_str());
+}
+
+string DeleteObjectDataOp::Schema(RGWOpParams *params) {
+	string objectdata_table, object, bucket_name;
+
+	if (!params)
+		return NULL;
+
+	objectdata_table = params->objectdata_table;
+	object = params->object;
+	bucket_name = params->bucket_name;
+
+	return fmt::format(Query.c_str(),
+		 objectdata_table.c_str(), bucket_name.c_str(), object.c_str());
+}
+
 RGWOp * DBstore::getRGWOp(string Op)
 {
 	if (!Op.compare("InsertUser"))
@@ -184,6 +238,12 @@ RGWOp * DBstore::getRGWOp(string Op)
 		return rgwops.ListBucket;
 	if (!Op.compare("ListObject"))
 		return rgwops.ListObject;
+	if (!Op.compare("PutObjectData"))
+		return rgwops.PutObjectData;
+	if (!Op.compare("GetObjectData"))
+		return rgwops.GetObjectData;
+	if (!Op.compare("DeleteObjectData"))
+		return rgwops.DeleteObjectData;
 
 	return NULL;
 }
@@ -200,6 +260,7 @@ int DBstore::InitializeParams(string Op, RGWOpParams *params)
 	params->user_table = user_table;
 	params->bucket_table = bucket_table;
 	params->object_table = object_table;
+	params->objectdata_table = objectdata_table;
 
 out:
 	return ret;

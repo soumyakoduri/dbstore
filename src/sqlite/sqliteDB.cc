@@ -36,9 +36,35 @@ do {								\
 	rc = sqlite3_bind_text(stmt, index, str, -1, SQLITE_STATIC); \
 								\
 	if (rc != SQLITE_OK) {					\
-	        printf("sqlite bind text failed for user(%s)"	\
+	        printf("sqlite bind text failed for text(%s)"	\
 			"index (%d) with error(%s) \n",		\
 			str, index, sqlite3_errmsg(*sdb));	\
+		rc = -1;					\
+		goto out;					\
+	}							\
+}while(0);
+
+#define SQL_BIND_INT(stmt, index, num, sdb)			\
+do {								\
+	rc = sqlite3_bind_int(stmt, index, num);		\
+								\
+	if (rc != SQLITE_OK) {					\
+	        printf("sqlite bind int failed for int(%d)"	\
+			"index (%d) with error(%s) \n",		\
+			num, index, sqlite3_errmsg(*sdb));	\
+		rc = -1;					\
+		goto out;					\
+	}							\
+}while(0);
+
+#define SQL_BIND_BLOB(stmt, index, blob, size, sdb)		\
+do {								\
+	rc = sqlite3_bind_blob(stmt, index, blob, size, NULL);  \
+								\
+	if (rc != SQLITE_OK) {					\
+	        printf("sqlite bind blob failed for "		\
+			"index (%d) with error(%s) \n",		\
+			index, sqlite3_errmsg(*sdb));	\
 		rc = -1;					\
 		goto out;					\
 	}							\
@@ -105,6 +131,29 @@ static int list_object(sqlite3_stmt *stmt) {
 	return 0;
 }
 
+static int get_objectdata(sqlite3_stmt *stmt) {
+	if (!stmt)
+		return -1;
+
+	int datalen = 0;
+	const void *blob = NULL;
+	int i = 0;
+
+	blob = sqlite3_column_blob(stmt, 3);
+	datalen = sqlite3_column_bytes(stmt, 3);
+
+	cout<<sqlite3_column_text(stmt, 0)<<", ";
+	cout<<sqlite3_column_text(stmt, 1)<<",";
+	cout<<sqlite3_column_int(stmt, 2)<<",";
+	char data[datalen+1] = {};
+	if (blob)
+		strncpy(data, (const char *)blob, datalen);
+
+	cout<<data<<","<<datalen<<"\n";
+
+	return 0;
+}
+
 void *SQLiteDB::openDB()
 {
 	string dbname;
@@ -164,15 +213,17 @@ int SQLiteDB::Step(sqlite3_stmt *stmt, int (*cbk)(sqlite3_stmt *stmt))
 	if (!stmt)
 		return -1;
 
-	ret = sqlite3_step(stmt);
+again:
+		ret = sqlite3_step(stmt);
 
-	if ((ret != SQLITE_DONE) && (ret != SQLITE_ROW)) {
-	        printf("sqlite step failed (%s) \n", sqlite3_errmsg(db));
-		return -1;
-	} else { //should we check only for SQLITE_ROW ?
-		if (cbk)
-			(*cbk)(stmt);
-	}
+		if ((ret != SQLITE_DONE) && (ret != SQLITE_ROW)) {
+		        printf("sqlite step failed (%s) \n", sqlite3_errmsg(db));
+			return -1;
+		} else if (ret == SQLITE_ROW) {
+			if (cbk)
+				(*cbk)(stmt);
+			goto again;
+		}
 
 	return 0;
 }
@@ -200,12 +251,13 @@ out:
 int SQLiteDB::createTables()
 {
 	int ret = -1;
-	int cu, cb, co = -1;
+	int cu, cb, co, cod = -1;
 	RGWOpParams params = {};
 
 	params.user_table = getUserTable();
 	params.bucket_table = getBucketTable();
 	params.object_table = getObjectTable();
+	params.objectdata_table = getObjectDataTable();
 
 	if (cu = createUserTable(&params))
 		goto out;
@@ -214,6 +266,9 @@ int SQLiteDB::createTables()
 		goto out;
 
 	if (co = createObjectTable(&params))
+		goto out;
+
+	if (cod = createObjectDataTable(&params))
 		goto out;
 
 	ret = 0;
@@ -225,6 +280,8 @@ out:
 			DeleteBucketTable(&params);
 		if (co)
 			DeleteObjectTable(&params);
+		if (cod)
+			DeleteObjectDataTable(&params);
 	}
 
 	return ret;
@@ -275,6 +332,21 @@ out:
 	return ret;
 }
 
+int SQLiteDB::createObjectDataTable(RGWOpParams *params)
+{
+	int ret = -1;
+	string schema;
+
+	schema = CreateTableSchema("ObjectData", params);
+
+	ret = exec(schema.c_str(), NULL);
+	if (ret)
+		cout<<"CreateObjectDataTable failed \n";
+
+out:
+	return ret;
+}
+
 int SQLiteDB::DeleteUserTable(RGWOpParams *params)
 {
 	int ret = -1;
@@ -315,6 +387,21 @@ int SQLiteDB::DeleteObjectTable(RGWOpParams *params)
 	ret = exec(schema.c_str(), NULL);
 	if (ret)
 		cout<<"DeleteObjectTable failed \n";
+
+out:
+	return ret;
+}
+
+int SQLiteDB::DeleteObjectDataTable(RGWOpParams *params)
+{
+	int ret = -1;
+	string schema;
+
+	schema = DeleteTableSchema(params->objectdata_table);
+
+	ret = exec(schema.c_str(), NULL);
+	if (ret)
+		cout<<"DeleteObjectDataTable failed \n";
 
 out:
 	return ret;
@@ -765,6 +852,163 @@ int SQLListObject::Execute(struct RGWOpParams *params)
 	int ret = -1;
 
 	SQL_EXECUTE(params, stmt, list_object);
+out:
+	return ret;
+}
+
+int SQLPutObjectData::Prepare(struct RGWOpParams *params)
+{
+	int ret = -1;
+	string schema;
+	struct RGWOpParams t_params = {};
+
+	if (!*sdb) {
+		printf("In SQLPutObjectData - no db\n");
+		goto out;
+	}
+
+	t_params.objectdata_table = params->objectdata_table;
+	t_params.bucket_name = ":bucket";
+	t_params.object = ":object";
+	//t_params.offset = "?3";
+	t_params.data = ":data";
+	//t_params.datalen = ":datalen";
+
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PreparePutObjectData");
+
+out:
+	return ret;
+}
+
+int SQLPutObjectData::Bind(struct RGWOpParams *params)
+{
+	int index = -1;
+	int rc = 0;
+
+	SQL_BIND_INDEX(stmt, index, ":object", sdb);
+
+	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
+
+	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+
+	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
+
+	SQL_BIND_INDEX(stmt, index, ":offset", sdb);
+
+	SQL_BIND_INT(stmt, 3, params->offset, sdb);
+
+	SQL_BIND_INDEX(stmt, index, ":data", sdb);
+
+	SQL_BIND_BLOB(stmt, index, params->data.c_str(), params->data.length(), sdb);
+
+	SQL_BIND_INDEX(stmt, index, ":datalen", sdb);
+
+	SQL_BIND_INT(stmt, index, params->data.length(), sdb);
+
+out:
+	return rc;
+}
+
+int SQLPutObjectData::Execute(struct RGWOpParams *params)
+{
+	int ret = -1;
+
+	SQL_EXECUTE(params, stmt, NULL);
+out:
+	return ret;
+}
+
+int SQLGetObjectData::Prepare(struct RGWOpParams *params)
+{
+	int ret = -1;
+	string schema;
+	struct RGWOpParams t_params = {};
+
+	if (!*sdb) {
+		printf("In SQLGetObjectData - no db\n");
+		goto out;
+	}
+
+	t_params.objectdata_table = params->objectdata_table;
+	t_params.bucket_name = ":bucket";
+	t_params.object = ":object";
+
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PrepareGetObjectData");
+
+out:
+	return ret;
+}
+
+int SQLGetObjectData::Bind(struct RGWOpParams *params)
+{
+	int index = -1;
+	int rc = 0;
+
+	SQL_BIND_INDEX(stmt, index, ":object", sdb);
+
+	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
+
+	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+
+	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
+out:
+	return rc;
+}
+
+int SQLGetObjectData::Execute(struct RGWOpParams *params)
+{
+	int ret = -1;
+
+	SQL_EXECUTE(params, stmt, get_objectdata);
+out:
+	return ret;
+}
+
+int SQLDeleteObjectData::Prepare(struct RGWOpParams *params)
+{
+	int ret = -1;
+	string schema;
+	struct RGWOpParams t_params = {};
+
+	if (!*sdb) {
+		printf("In SQLDeleteObjectData - no db\n");
+		goto out;
+	}
+
+	t_params.objectdata_table = params->objectdata_table;
+	t_params.bucket_name = ":bucket";
+	t_params.object = ":object";
+
+	SQL_PREPARE(t_params, sdb, stmt, ret,
+		    "PrepareDeleteObjectData");
+
+out:
+	return ret;
+}
+
+int SQLDeleteObjectData::Bind(struct RGWOpParams *params)
+{
+	int index = -1;
+	int rc = 0;
+
+	SQL_BIND_INDEX(stmt, index, ":object", sdb);
+
+	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
+
+	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+
+	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
+out:
+	return rc;
+}
+
+int SQLDeleteObjectData::Execute(struct RGWOpParams *params)
+{
+	int ret = -1;
+
+	SQL_EXECUTE(params, stmt, NULL);
 out:
 	return ret;
 }
