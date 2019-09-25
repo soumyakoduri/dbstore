@@ -19,9 +19,13 @@ struct RGWOpParams {
 	string user_table;
 	string bucket_table;
 	string object_table;
+	string objectdata_table;
 	string user_name;
 	string bucket_name;
 	string object;
+	size_t offset;
+	string data;
+	size_t datalen;
 };
 
 struct RGWOps {
@@ -34,6 +38,9 @@ struct RGWOps {
 	class InsertObjectOp *InsertObject;
 	class RemoveObjectOp *RemoveObject;
 	class ListObjectOp *ListObject;
+	class PutObjectDataOp *PutObjectData;
+	class GetObjectDataOp *GetObjectData;
+	class DeleteObjectDataOp *DeleteObjectData;
 };
 
 class RGWOp {
@@ -54,7 +61,16 @@ class RGWOp {
 			PRIMARY KEY (BucketName, ObjectName), \
 			FOREIGN KEY (BucketName) \
 				REFERENCES '{}' (BucketName) ON DELETE CASCADE ON UPDATE CASCADE \n);";
-
+        const string CreateObjectDataTableQ =
+                "CREATE TABLE IF NOT EXISTS '{}' ( \
+			BucketName TEXT NOT NULL , \
+			ObjectName TEXT NOT NULL , \
+                        Offset   INTEGER NOT NULL, \
+                        Data     BLOB,             \
+			Size 	 INTEGER NOT NULL, \
+			PRIMARY KEY (BucketName, ObjectName, Offset), \
+                        FOREIGN KEY (BucketName, ObjectName) \
+                                REFERENCES '{}' (BucketName, ObjectName) ON DELETE CASCADE ON UPDATE CASCADE \n);";
 
 	const string DropQ = "DROP TABLE IF EXISTS '{}'";
 	const string ListAllQ = "SELECT  * from '{}'";
@@ -151,6 +167,34 @@ class ListObjectOp: public RGWOp {
 	string Schema(RGWOpParams *params);
 };
 
+class PutObjectDataOp: public RGWOp {
+	private:
+	const string Query =
+	"INSERT INTO '{}' (BucketName, ObjectName, Offset, Data, Size) \
+       		VALUES ({}, {}, {}, {}, {})";
+
+	public:
+	string Schema(RGWOpParams *params);
+};
+
+class GetObjectDataOp: public RGWOp {
+	private:
+	const string Query =
+	"SELECT * from '{}' where BucketName = {} and ObjectName = {}";
+
+	public:
+	string Schema(RGWOpParams *params);
+};
+
+class DeleteObjectDataOp: public RGWOp {
+	private:
+	const string Query =
+	"DELETE from '{}' where BucketName = {} and ObjectName = {}";
+
+	public:
+	string Schema(RGWOpParams *params);
+};
+
 class DBstore {
 	private:
 	const string tenant;
@@ -158,18 +202,21 @@ class DBstore {
 	const string bucket_table;
 	const string object_table; // XXX: Make it per bucket but then it shall not
 				   // be straightforward to save prepared statement.
+	const string objectdata_table; // XXX: Make it per bucket
 
 	public:	
 	DBstore(string tenant_name) : tenant(tenant_name),
        				user_table(tenant_name+".user.table"),
 			        bucket_table(tenant_name+".bucket.table"),
-				object_table(tenant_name+".object.table")
+				object_table(tenant_name+".object.table"),
+				objectdata_table(tenant_name+".objectdata.table")
        			        {}
 
 	string getDBname();
 	string getUserTable();
 	string getBucketTable();
 	string getObjectTable();
+	string getObjectDataTable();
 
 	struct RGWOps rgwops; // RGW operations, make it private?
 	void *db; // Backend database handle, make it private?
