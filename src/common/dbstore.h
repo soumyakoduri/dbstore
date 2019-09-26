@@ -28,6 +28,33 @@ struct RGWOpParams {
 	size_t datalen;
 };
 
+/* Used for prepared schemas.
+ * Difference with above structure is that all 
+ * the fields are strings here to accommodate any
+ * style identifiers used by backend db
+ */
+struct RGWOpPrepareParams {
+	string tenant;
+	string user_table;
+	string bucket_table;
+	string object_table;
+	string objectdata_table;
+	string user_name;
+	string bucket_name;
+	string object;
+	string offset;
+	string data;
+	string datalen;
+};
+
+struct SchemaParams {
+	bool is_prepare;
+	union {
+		struct RGWOpParams *params;
+		struct RGWOpPrepareParams *p_params;
+	} u;
+};
+
 struct RGWOps {
 	class InsertUserOp *InsertUser;
 	class RemoveUserOp *RemoveUser;
@@ -91,7 +118,7 @@ class InsertUserOp : public RGWOp {
 	const string Query = "INSERT INTO '{}' (UserName) VALUES ({});";
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class RemoveUserOp: public RGWOp {
@@ -100,7 +127,7 @@ class RemoveUserOp: public RGWOp {
 	"DELETE from '{}' where UserName = {}";
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class ListUserOp: public RGWOp {
@@ -109,7 +136,7 @@ class ListUserOp: public RGWOp {
 	"SELECT  * from '{}' where UserName = {}";
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class InsertBucketOp: public RGWOp {
@@ -118,7 +145,7 @@ class InsertBucketOp: public RGWOp {
 	"INSERT INTO '{}' (BucketName, UserName) VALUES ({}, {})";
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class RemoveBucketOp: public RGWOp {
@@ -127,7 +154,7 @@ class RemoveBucketOp: public RGWOp {
 	"DELETE from '{}' where BucketName = {}";
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class ListBucketOp: public RGWOp {
@@ -136,7 +163,7 @@ class ListBucketOp: public RGWOp {
 	"SELECT  * from '{}' where BucketName = {}";
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class InsertObjectOp: public RGWOp {
@@ -145,7 +172,7 @@ class InsertObjectOp: public RGWOp {
 	"INSERT INTO '{}' (BucketName, ObjectName) VALUES ({}, {})";
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class RemoveObjectOp: public RGWOp {
@@ -154,7 +181,7 @@ class RemoveObjectOp: public RGWOp {
 	"DELETE from '{}' where BucketName = {} and ObjectName = {}";
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class ListObjectOp: public RGWOp {
@@ -164,7 +191,7 @@ class ListObjectOp: public RGWOp {
 	// XXX: Include queries for specific bucket and user too
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class PutObjectDataOp: public RGWOp {
@@ -174,7 +201,7 @@ class PutObjectDataOp: public RGWOp {
        		VALUES ({}, {}, {}, {}, {})";
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class GetObjectDataOp: public RGWOp {
@@ -183,7 +210,7 @@ class GetObjectDataOp: public RGWOp {
 	"SELECT * from '{}' where BucketName = {} and ObjectName = {}";
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class DeleteObjectDataOp: public RGWOp {
@@ -192,7 +219,7 @@ class DeleteObjectDataOp: public RGWOp {
 	"DELETE from '{}' where BucketName = {} and ObjectName = {}";
 
 	public:
-	string Schema(RGWOpParams *params);
+	string Schema(SchemaParams *s_params);
 };
 
 class DBstore {
