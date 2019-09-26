@@ -53,169 +53,315 @@ string RGWOp::ListTableSchema(string table) {
 	return fmt::format(ListAllQ.c_str(), table.c_str());
 }
 
-string InsertUserOp::Schema(RGWOpParams *params) {
-	string user_table, user_name;
+string InsertUserOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
 
-	if (!params)
+	if (!s_params)
 		return NULL;
 
-	user_table = params->user_table;
-	user_name = params->user_name;
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(), pp->user_table.c_str(),
+			       pp->user_name.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
+
+	return fmt::format(Query.c_str(), p->user_table.c_str(),
+		       p->user_name.c_str());
+}
+
+string RemoveUserOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
+
+	if (!s_params)
+		return NULL;
+
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(), pp->user_table.c_str(),
+			       pp->user_name.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
+
+	return fmt::format(Query.c_str(), p->user_table.c_str(),
+		       p->user_name.c_str());
+}
+
+string ListUserOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
+
+	if (!s_params)
+		return NULL;
+
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(), pp->user_table.c_str(),
+			       pp->user_name.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
+
+	return fmt::format(Query.c_str(), p->user_table.c_str(),
+		       p->user_name.c_str());
+}
+
+string InsertBucketOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
+
+	if (!s_params)
+		return NULL;
+
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(), pp->bucket_table.c_str(),
+			       	pp->bucket_name.c_str(), pp->user_name.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
+
+	return fmt::format(Query.c_str(), p->bucket_table.c_str(),
+		       p->bucket_name.c_str(), p->user_name.c_str());
+}
+
+string RemoveBucketOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
+
+	if (!s_params)
+		return NULL;
+
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(), pp->bucket_table.c_str(),
+			       pp->bucket_name.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
+
+	return fmt::format(Query.c_str(), p->bucket_table.c_str(),
+		       p->bucket_name.c_str());
+}
+
+string ListBucketOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
+
+	if (!s_params)
+		return NULL;
+
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(), pp->bucket_table.c_str(),
+			       pp->bucket_name.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
+
+	return fmt::format(Query.c_str(), p->bucket_table.c_str(),
+		       p->bucket_name.c_str());
+}
+
+string InsertObjectOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
+
+	if (!s_params)
+		return NULL;
+
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(),
+		 	pp->object_table.c_str(), pp->bucket_name.c_str(),
+		        pp->object.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
 
 	return fmt::format(Query.c_str(),
-		 params->user_table.c_str(), user_name.c_str());
+		 p->object_table.c_str(), p->bucket_name.c_str(),
+		 p->object.c_str());
 }
 
-string RemoveUserOp::Schema(RGWOpParams *params) {
+string RemoveObjectOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
 
-	string user_table, user;
-
-	if (!params)
+	if (!s_params)
 		return NULL;
 
-	user_table = params->user_table;
-	user = params->user_name;
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(), pp->object_table.c_str(),
+			       pp->bucket_name.c_str(), pp->object.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
+
+	return fmt::format(Query.c_str(), p->object_table.c_str(),
+		       p->bucket_name.c_str(), p->object.c_str());
+}
+
+string ListObjectOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
+
+
+	if (!s_params)
+		return NULL;
+
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(), pp->object_table.c_str(),
+			       pp->bucket_name.c_str(), pp->object.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
+
+	return fmt::format(Query.c_str(), p->object_table.c_str(),
+		       p->bucket_name.c_str(), p->object.c_str());
+}
+
+string PutObjectDataOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
+
+	if (!s_params)
+		return NULL;
+
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(),
+		 	pp->objectdata_table.c_str(),
+		       	pp->bucket_name.c_str(), pp->object.c_str(),
+		       	pp->offset.c_str(), pp->data.c_str(),
+			pp->datalen.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
 
 	return fmt::format(Query.c_str(),
-		 user_table.c_str(), user.c_str());
+	 	p->objectdata_table.c_str(), p->bucket_name.c_str(),
+	 	p->object.c_str(), p->offset, p->data.c_str(), p->datalen);
 }
 
-string ListUserOp::Schema(RGWOpParams *params) {
+string GetObjectDataOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
 
-	string user_table, user;
-
-	if (!params)
+	if (!s_params)
 		return NULL;
 
-	user_table = params->user_table;
-	user = params->user_name;
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(),
+		 	pp->objectdata_table.c_str(), pp->bucket_name.c_str(),
+		        pp->object.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
 
 	return fmt::format(Query.c_str(),
-		 user_table.c_str(), user.c_str());
+		 p->objectdata_table.c_str(), p->bucket_name.c_str(),
+		 p->object.c_str());
 }
 
-string InsertBucketOp::Schema(RGWOpParams *params) {
-	string bucket_table, bucket, user;
+string DeleteObjectDataOp::Schema(SchemaParams *s_params) {
+	struct RGWOpParams *p;
+	struct RGWOpPrepareParams *pp;
 
-	if (!params)
+	if (!s_params)
 		return NULL;
 
-	bucket_table = params->bucket_table;
-	bucket = params->bucket_name;
-	user = params->user_name;
+	if (s_params->is_prepare) {
+		pp = s_params->u.p_params;
+
+		if (!pp)
+			return NULL;
+
+		return fmt::format(Query.c_str(),
+		 	pp->objectdata_table.c_str(), pp->bucket_name.c_str(),
+		        pp->object.c_str());
+	}
+
+	p = s_params->u.params;
+	if (!p) /* RGWOpParams */
+		return NULL;
 
 	return fmt::format(Query.c_str(),
-		 bucket_table.c_str(), bucket.c_str(), user.c_str());
-}
-
-string RemoveBucketOp::Schema(RGWOpParams *params) {
-	string bucket_table, bucket;
-
-	if (!params)
-		return NULL;
-
-	bucket_table = params->bucket_table;
-	bucket = params->bucket_name;
-
-	return fmt::format(Query.c_str(), bucket_table.c_str(), bucket.c_str());
-}
-
-string ListBucketOp::Schema(RGWOpParams *params) {
-	string bucket_table, bucket;
-
-	if (!params)
-		return NULL;
-
-	bucket_table = params->bucket_table;
-	bucket = params->bucket_name;
-
-	return fmt::format(Query.c_str(), bucket_table.c_str(), bucket.c_str());
-}
-
-string InsertObjectOp::Schema(RGWOpParams *params) {
-	string object_table, object, bucket_name;
-
-	if (!params)
-		return NULL;
-
-	object_table = params->object_table;
-	object = params->object;
-	bucket_name = params->bucket_name;
-
-	return fmt::format(Query.c_str(),
-		 object_table.c_str(), bucket_name.c_str(), object.c_str());
-}
-
-string RemoveObjectOp::Schema(RGWOpParams *params) {
-	string object_table, object, bucket;
-
-	if (!params)
-		return NULL;
-
-	object_table = params->object_table;
-	object = params->object;
-	bucket = params->bucket_name;
-
-	return fmt::format(Query.c_str(), object_table.c_str(), bucket.c_str(), object.c_str());
-}
-
-string ListObjectOp::Schema(RGWOpParams *params) {
-	string bucket, object_table, object;
-
-	if (!params)
-		return NULL;
-
-	object_table = params->object_table;
-	object = params->object;
-	bucket = params->bucket_name;
-
-	return fmt::format(Query.c_str(), object_table.c_str(), bucket.c_str(), object.c_str());
-}
-
-string PutObjectDataOp::Schema(RGWOpParams *params) {
-	string objectdata_table, object, bucket_name;
-	size_t offset, datalen;
-	string data;
-
-	if (!params)
-		return NULL;
-
-	objectdata_table = params->objectdata_table;
-	object = params->object;
-	bucket_name = params->bucket_name;
-	data = params->data;
-
-	return fmt::format(Query.c_str(),
-		 objectdata_table.c_str(), bucket_name.c_str(), object.c_str(),
-		 ":offset", ":data", ":datalen");
-}
-
-string GetObjectDataOp::Schema(RGWOpParams *params) {
-	string objectdata_table, object, bucket_name;
-
-	if (!params)
-		return NULL;
-
-	objectdata_table = params->objectdata_table;
-	object = params->object;
-	bucket_name = params->bucket_name;
-
-	return fmt::format(Query.c_str(),
-		 objectdata_table.c_str(), bucket_name.c_str(), object.c_str());
-}
-
-string DeleteObjectDataOp::Schema(RGWOpParams *params) {
-	string objectdata_table, object, bucket_name;
-
-	if (!params)
-		return NULL;
-
-	objectdata_table = params->objectdata_table;
-	object = params->object;
-	bucket_name = params->bucket_name;
-
-	return fmt::format(Query.c_str(),
-		 objectdata_table.c_str(), bucket_name.c_str(), object.c_str());
+		 p->objectdata_table.c_str(), p->bucket_name.c_str(),
+		 p->object.c_str());
 }
 
 RGWOp * DBstore::getRGWOp(string Op)

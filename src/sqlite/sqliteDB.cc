@@ -7,7 +7,7 @@
 do {						\
 	string schema;			   	\
 	schema = Schema(&params);	   	\
-					   	\
+						\
 	sqlite3_prepare_v2 (*sdb, schema.c_str(), \
 		            -1, &stmt , NULL);	\
 	if (!stmt) {				\
@@ -150,6 +150,25 @@ static int get_objectdata(sqlite3_stmt *stmt) {
 		strncpy(data, (const char *)blob, datalen);
 
 	cout<<data<<","<<datalen<<"\n";
+
+	return 0;
+}
+
+int InitPrepareParams(RGWOpPrepareParams *params)
+{
+	if (!params)
+		return -1;
+
+	params->tenant = ":tenant";
+	params->user_table = ":user_table";
+	params->object_table = ":object_table";
+	params->objectdata_table = ":objectdata_table";
+	params->user_name = ":user";
+	params->bucket_name = ":bucket";
+	params->object = ":object";
+	params->offset = ":offset";
+	params->data = ":data";
+	params->datalen = ":datalen";
 
 	return 0;
 }
@@ -457,18 +476,20 @@ out:
 int SQLInsertUser::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	struct RGWOpParams t_params = {};
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
 
 	if (!*sdb) {
 		printf("In SQLInsertUser - no db\n");
 		goto out;
 	}
 
-	t_params.user_table = params->user_table;
-	t_params.user_name = ":user";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PrepareInsertUser");
+	p_params.user_table = params->user_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareInsertUser");
 out:
 	return ret;
 }
@@ -477,8 +498,9 @@ int SQLInsertUser::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":user", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.user_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->user_name.c_str(), sdb);
 
@@ -498,19 +520,20 @@ out:
 int SQLRemoveUser::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
 
 	if (!*sdb) {
 		printf("In SQLRemoveUser - no db\n");
 		goto out;
 	}
 
-	t_params.user_table = params->user_table;
-	t_params.user_name = ":user";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PrepareRemoveUser");
+	p_params.user_table = params->user_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareRemoveUser");
 out:
 	return ret;
 }
@@ -519,8 +542,9 @@ int SQLRemoveUser::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":user", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.user_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->user_name.c_str(), sdb);
 
@@ -540,19 +564,20 @@ out:
 int SQLListUser::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
 
 	if (!*sdb) {
 		printf("In SQLListUser - no db\n");
 		goto out;
 	}
 
-	t_params.user_table = params->user_table;
-	t_params.user_name = ":user";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PrepareListUser");
+	p_params.user_table = params->user_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareListUser");
 out:
 	return ret;
 }
@@ -561,8 +586,9 @@ int SQLListUser::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":user", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.user_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->user_name.c_str(), sdb);
 out:
@@ -581,20 +607,20 @@ out:
 int SQLInsertBucket::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
 
 	if (!*sdb) {
 		printf("In SQLInsertBucket - no db\n");
 		goto out;
 	}
 
-	t_params.bucket_table = params->bucket_table;
-	t_params.user_name = ":user";
-	t_params.bucket_name = ":bucket";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PrepareInsertBucket");
+	p_params.bucket_table = params->bucket_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareInsertBucket");
 
 out:
 	return ret;
@@ -604,12 +630,13 @@ int SQLInsertBucket::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":user", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.user_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->user_name.c_str(), sdb);
 
-	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.bucket_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 
@@ -629,19 +656,20 @@ out:
 int SQLRemoveBucket::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	struct RGWOpParams t_params = {};
-	string schema;
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
 
 	if (!*sdb) {
 		printf("In SQLRemoveBucket - no db\n");
 		goto out;
 	}
 
-	t_params.bucket_table = params->bucket_table;
-	t_params.bucket_name = ":bucket";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PrepareRemoveBucket");
+	p_params.bucket_table = params->bucket_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareRemoveBucket");
 
 out:
 	return ret;
@@ -651,8 +679,9 @@ int SQLRemoveBucket::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.bucket_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 
@@ -672,19 +701,20 @@ out:
 int SQLListBucket::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
 
 	if (!*sdb) {
 		printf("In SQLListBucket - no db\n");
 		goto out;
 	}
 
-	t_params.bucket_table = params->bucket_table;
-	t_params.bucket_name = ":bucket";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PrepareListBucket");
+	p_params.bucket_table = params->bucket_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareListBucket");
 
 out:
 	return ret;
@@ -694,8 +724,9 @@ int SQLListBucket::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.bucket_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 
@@ -715,20 +746,20 @@ out:
 int SQLInsertObject::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
 
 	if (!*sdb) {
 		printf("In SQLInsertObject - no db\n");
 		goto out;
 	}
 
-	t_params.object_table = params->object_table;
-	t_params.bucket_name = ":bucket";
-	t_params.object = ":object";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PrepareInsertObject");
+	p_params.object_table = params->object_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareInsertObject");
 
 out:
 	return ret;
@@ -738,12 +769,13 @@ int SQLInsertObject::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":object", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.object.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
 
-	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.bucket_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 
@@ -763,20 +795,20 @@ out:
 int SQLRemoveObject::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
 
 	if (!*sdb) {
 		printf("In SQLRemoveObject - no db\n");
 		goto out;
 	}
 
-	t_params.object_table = params->object_table;
-	t_params.bucket_name = ":bucket";
-	t_params.object = ":object";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PrepareRemoveObject");
+	p_params.object_table = params->object_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareRemoveObject");
 
 out:
 	return ret;
@@ -786,12 +818,13 @@ int SQLRemoveObject::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":object", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.object.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
 
-	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.bucket_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 
@@ -811,20 +844,20 @@ out:
 int SQLListObject::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
 
 	if (!*sdb) {
 		printf("In SQLListObject - no db\n");
 		goto out;
 	}
 
-	t_params.object_table = params->object_table;
-	t_params.bucket_name = ":bucket";
-	t_params.object = ":object";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PrepareListObject");
+	p_params.object_table = params->object_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareListObject");
 
 out:
 	return ret;
@@ -834,12 +867,13 @@ int SQLListObject::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":object", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.object.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
 
-	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.bucket_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 
@@ -859,23 +893,20 @@ out:
 int SQLPutObjectData::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
 
 	if (!*sdb) {
 		printf("In SQLPutObjectData - no db\n");
 		goto out;
 	}
 
-	t_params.objectdata_table = params->objectdata_table;
-	t_params.bucket_name = ":bucket";
-	t_params.object = ":object";
-	//t_params.offset = "?3";
-	t_params.data = ":data";
-	//t_params.datalen = ":datalen";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PreparePutObjectData");
+	p_params.objectdata_table = params->objectdata_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PreparePutObjectData");
 
 out:
 	return ret;
@@ -885,24 +916,25 @@ int SQLPutObjectData::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":object", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.object.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
 
-	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.bucket_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 
-	SQL_BIND_INDEX(stmt, index, ":offset", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.offset.c_str(), sdb);
 
 	SQL_BIND_INT(stmt, 3, params->offset, sdb);
 
-	SQL_BIND_INDEX(stmt, index, ":data", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.data.c_str(), sdb);
 
 	SQL_BIND_BLOB(stmt, index, params->data.c_str(), params->data.length(), sdb);
 
-	SQL_BIND_INDEX(stmt, index, ":datalen", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.datalen.c_str(), sdb);
 
 	SQL_BIND_INT(stmt, index, params->data.length(), sdb);
 
@@ -922,20 +954,20 @@ out:
 int SQLGetObjectData::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
 
 	if (!*sdb) {
 		printf("In SQLGetObjectData - no db\n");
 		goto out;
 	}
 
-	t_params.objectdata_table = params->objectdata_table;
-	t_params.bucket_name = ":bucket";
-	t_params.object = ":object";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PrepareGetObjectData");
+	p_params.objectdata_table = params->objectdata_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareGetObjectData");
 
 out:
 	return ret;
@@ -945,12 +977,13 @@ int SQLGetObjectData::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":object", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.object.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
 
-	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.bucket_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 out:
@@ -969,20 +1002,21 @@ out:
 int SQLDeleteObjectData::Prepare(struct RGWOpParams *params)
 {
 	int ret = -1;
-	string schema;
-	struct RGWOpParams t_params = {};
+	struct RGWOpPrepareParams p_params = PrepareParams;
+	struct SchemaParams s_params = {};
+
 
 	if (!*sdb) {
 		printf("In SQLDeleteObjectData - no db\n");
 		goto out;
 	}
 
-	t_params.objectdata_table = params->objectdata_table;
-	t_params.bucket_name = ":bucket";
-	t_params.object = ":object";
+	s_params.is_prepare = true;
+	s_params.u.p_params = &p_params;
 
-	SQL_PREPARE(t_params, sdb, stmt, ret,
-		    "PrepareDeleteObjectData");
+	p_params.objectdata_table = params->objectdata_table;
+
+	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareDeleteObjectData");
 
 out:
 	return ret;
@@ -992,12 +1026,13 @@ int SQLDeleteObjectData::Bind(struct RGWOpParams *params)
 {
 	int index = -1;
 	int rc = 0;
+	struct RGWOpPrepareParams p_params = PrepareParams;
 
-	SQL_BIND_INDEX(stmt, index, ":object", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.object.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->object.c_str(), sdb);
 
-	SQL_BIND_INDEX(stmt, index, ":bucket", sdb);
+	SQL_BIND_INDEX(stmt, index, p_params.bucket_name.c_str(), sdb);
 
 	SQL_BIND_TEXT(stmt, index, params->bucket_name.c_str(), sdb);
 out:

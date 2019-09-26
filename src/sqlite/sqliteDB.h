@@ -12,15 +12,22 @@
 
 using namespace std;
 
+int InitPrepareParams(RGWOpPrepareParams *params);
+
 class SQLiteDB : public DBstore, public RGWOp{
 	private:
 	sqlite3 *db = NULL; // make this private again
 
 	public:	
 	sqlite3_stmt *stmt = NULL;
+	RGWOpPrepareParams PrepareParams;
 
-	SQLiteDB(string tenant_name) : DBstore(tenant_name) {}
-	SQLiteDB(string tenant_name, sqlite3 *dbi) : DBstore(tenant_name), db(dbi) {}
+	SQLiteDB(string tenant_name) : DBstore(tenant_name) {
+		InitPrepareParams(&PrepareParams);
+	}
+	SQLiteDB(string tenant_name, sqlite3 *dbi) : DBstore(tenant_name), db(dbi) {
+		InitPrepareParams(&PrepareParams);
+	}
 	~SQLiteDB() {
 		printf("closing db (%p)\n", db);
 		if(db)
