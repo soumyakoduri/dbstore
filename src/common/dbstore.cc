@@ -9,6 +9,10 @@ string DBstore::getDBname() {
 	return tenant + ".db";
 }
 
+string DBstore::getTenant() {
+	return tenant;
+}
+
 string DBstore::getUserTable() {
 	return user_table;
 }

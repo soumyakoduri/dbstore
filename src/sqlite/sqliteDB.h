@@ -40,6 +40,7 @@ class SQLiteDB : public DBstore, public RGWOp{
 	int closeDB();
 	int Step(sqlite3_stmt *stmt, int (*cbk)(sqlite3_stmt *stmt));
 	int Reset(sqlite3_stmt *stmt);
+	int InitializeRGWOps();
 
 	int createTables();
 	int createBucketTable(RGWOpParams *params);

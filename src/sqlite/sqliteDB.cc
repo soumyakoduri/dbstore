@@ -154,6 +154,27 @@ static int get_objectdata(sqlite3_stmt *stmt) {
 	return 0;
 }
 
+int SQLiteDB::InitializeRGWOps()
+{
+	string tenant = getTenant();
+
+        (void)createTables();
+        rgwops.InsertUser = new SQLInsertUser(tenant, this);
+        rgwops.RemoveUser = new SQLRemoveUser(tenant, this);
+        rgwops.ListUser = new SQLListUser(tenant, this);
+        rgwops.InsertBucket = new SQLInsertBucket(tenant, this);
+        rgwops.RemoveBucket = new SQLRemoveBucket(tenant, this);
+        rgwops.ListBucket = new SQLListBucket(tenant, this);
+        rgwops.InsertObject = new SQLInsertObject(tenant, this);
+        rgwops.RemoveObject = new SQLRemoveObject(tenant, this);
+        rgwops.ListObject = new SQLListObject(tenant, this);
+        rgwops.PutObjectData = new SQLPutObjectData(tenant, this);
+        rgwops.GetObjectData = new SQLGetObjectData(tenant, this); 
+        rgwops.DeleteObjectData = new SQLDeleteObjectData(tenant, this);
+
+	return 0;
+}
+
 int InitPrepareParams(RGWOpPrepareParams *params)
 {
 	if (!params)
