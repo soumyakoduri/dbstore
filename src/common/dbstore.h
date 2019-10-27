@@ -240,6 +240,7 @@ class DBstore {
        			        {}
 
 	string getDBname();
+	string getTenant();
 	string getUserTable();
 	string getBucketTable();
 	string getObjectTable();
@@ -255,6 +256,7 @@ class DBstore {
         virtual void *openDB() { return NULL; }
         virtual int closeDB() { return 0; }
 	virtual int createTables() { return 0; }
+	virtual int InitializeRGWOps() { return 0; }
 
         virtual int ListAllBuckets(RGWOpParams *params) = 0;
         virtual int ListAllUsers(RGWOpParams *params) = 0;

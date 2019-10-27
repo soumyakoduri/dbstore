@@ -8,26 +8,6 @@
 #include <sqliteDB.h>
 #endif
 
-void initialize_RGWOps (string tenant, class DBstore *db)
-{
-#ifdef SQLITE_ENABLED
-	(void)db->createTables();
-	db->rgwops.InsertUser = new SQLInsertUser(tenant, db);
-	db->rgwops.RemoveUser = new SQLRemoveUser(tenant, db);
-	db->rgwops.ListUser = new SQLListUser(tenant, db);
-	db->rgwops.InsertBucket = new SQLInsertBucket(tenant, db);
-	db->rgwops.RemoveBucket = new SQLRemoveBucket(tenant, db);
-	db->rgwops.ListBucket = new SQLListBucket(tenant, db);
-	db->rgwops.InsertObject = new SQLInsertObject(tenant, db);
-	db->rgwops.RemoveObject = new SQLRemoveObject(tenant, db);
-	db->rgwops.ListObject = new SQLListObject(tenant, db);
-	db->rgwops.PutObjectData = new SQLPutObjectData(tenant, db);
-	db->rgwops.GetObjectData = new SQLGetObjectData(tenant, db);
-	db->rgwops.DeleteObjectData = new SQLDeleteObjectData(tenant, db);
-#else
-	db->rgwops.InsertUser = NULL;
-#endif
-}
 
 int main(int argc, char *argv[])
 {
@@ -58,7 +38,7 @@ int main(int argc, char *argv[])
 #endif
 
 	db->db = db->openDB();
-	initialize_RGWOps(tenant, db);
+	db->InitializeRGWOps();
 
 	db->InitializeParams("InsertUser", &params);
 	params.user_name = user1;
