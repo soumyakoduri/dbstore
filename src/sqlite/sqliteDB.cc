@@ -175,6 +175,24 @@ int SQLiteDB::InitializeRGWOps()
 	return 0;
 }
 
+int SQLiteDB::FreeRGWOps()
+{
+        delete rgwops.InsertUser;
+        delete rgwops.RemoveUser;
+        delete rgwops.ListUser;
+        delete rgwops.InsertBucket;
+        delete rgwops.RemoveBucket;
+        delete rgwops.ListBucket;
+        delete rgwops.InsertObject;
+        delete rgwops.RemoveObject;
+        delete rgwops.ListObject;
+        delete rgwops.PutObjectData;
+        delete rgwops.GetObjectData; 
+        delete rgwops.DeleteObjectData;
+
+	return 0;
+}
+
 int InitPrepareParams(RGWOpPrepareParams *params)
 {
 	if (!params)

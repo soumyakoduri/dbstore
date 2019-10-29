@@ -111,5 +111,7 @@ int main(int argc, char *argv[])
 
 	db->closeDB();
 
+	delete db;
+
 	return 0;
 }
