@@ -118,6 +118,8 @@ class InsertUserOp : public RGWOp {
 	const string Query = "INSERT INTO '{}' (UserName) VALUES ({});";
 
 	public:
+	virtual ~InsertUserOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -127,6 +129,8 @@ class RemoveUserOp: public RGWOp {
 	"DELETE from '{}' where UserName = {}";
 
 	public:
+	virtual ~RemoveUserOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -136,6 +140,8 @@ class ListUserOp: public RGWOp {
 	"SELECT  * from '{}' where UserName = {}";
 
 	public:
+	virtual ~ListUserOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -145,6 +151,8 @@ class InsertBucketOp: public RGWOp {
 	"INSERT INTO '{}' (BucketName, UserName) VALUES ({}, {})";
 
 	public:
+	virtual ~InsertBucketOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -154,6 +162,8 @@ class RemoveBucketOp: public RGWOp {
 	"DELETE from '{}' where BucketName = {}";
 
 	public:
+	virtual ~RemoveBucketOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -163,6 +173,8 @@ class ListBucketOp: public RGWOp {
 	"SELECT  * from '{}' where BucketName = {}";
 
 	public:
+	virtual ~ListBucketOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -172,6 +184,8 @@ class InsertObjectOp: public RGWOp {
 	"INSERT INTO '{}' (BucketName, ObjectName) VALUES ({}, {})";
 
 	public:
+	virtual ~InsertObjectOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -181,6 +195,8 @@ class RemoveObjectOp: public RGWOp {
 	"DELETE from '{}' where BucketName = {} and ObjectName = {}";
 
 	public:
+	virtual ~RemoveObjectOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -191,6 +207,8 @@ class ListObjectOp: public RGWOp {
 	// XXX: Include queries for specific bucket and user too
 
 	public:
+	virtual ~ListObjectOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -201,6 +219,8 @@ class PutObjectDataOp: public RGWOp {
        		VALUES ({}, {}, {}, {}, {})";
 
 	public:
+	virtual ~PutObjectDataOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -210,6 +230,8 @@ class GetObjectDataOp: public RGWOp {
 	"SELECT * from '{}' where BucketName = {} and ObjectName = {}";
 
 	public:
+	virtual ~GetObjectDataOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -219,6 +241,8 @@ class DeleteObjectDataOp: public RGWOp {
 	"DELETE from '{}' where BucketName = {} and ObjectName = {}";
 
 	public:
+	virtual ~DeleteObjectDataOp() {}
+
 	string Schema(SchemaParams *s_params);
 };
 
@@ -238,6 +262,9 @@ class DBstore {
 				object_table(tenant_name+".object.table"),
 				objectdata_table(tenant_name+".objectdata.table")
        			        {}
+	virtual	~DBstore() {
+		FreeRGWOps();
+	}
 
 	string getDBname();
 	string getTenant();
@@ -257,6 +284,7 @@ class DBstore {
         virtual int closeDB() { return 0; }
 	virtual int createTables() { return 0; }
 	virtual int InitializeRGWOps() { return 0; }
+	virtual int FreeRGWOps() { return 0; }
 
         virtual int ListAllBuckets(RGWOpParams *params) = 0;
         virtual int ListAllUsers(RGWOpParams *params) = 0;

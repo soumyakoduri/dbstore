@@ -29,10 +29,7 @@ class SQLiteDB : public DBstore, public RGWOp{
 		InitPrepareParams(&PrepareParams);
 	}
 	~SQLiteDB() {
-		printf("closing db (%p)\n", db);
-		if(db)
-			sqlite3_close(db);
-		db = NULL;
+		FreeRGWOps();
 	}
 	int exec(const char *schema,
 		 int (*callback)(void*,int,char**,char**));
@@ -41,6 +38,7 @@ class SQLiteDB : public DBstore, public RGWOp{
 	int Step(sqlite3_stmt *stmt, int (*cbk)(sqlite3_stmt *stmt));
 	int Reset(sqlite3_stmt *stmt);
 	int InitializeRGWOps();
+	int FreeRGWOps();
 
 	int createTables();
 	int createBucketTable(RGWOpParams *params);
