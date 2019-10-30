@@ -442,6 +442,28 @@ int DBstore::objectmapInsert(string bucket, void *ptr)
 	return 0;
 }
 
+int DBstore::objectmapDelete(string bucket)
+{
+	map<string, class ObjectOp*>::iterator iter;
+	class ObjectOp *Ob;
+
+	iter = DBstore::objectmap.find(bucket);
+
+	if (iter == DBstore::objectmap.end()) {
+		// entry doesn't exist
+		// return success or return error ?
+		// return success for now
+		return 0;
+	}
+
+	Ob = (class ObjectOp*) (iter->second);
+	Ob->FreeObjectOps();
+
+	DBstore::objectmap.erase(iter);
+
+	return 0;
+}
+
 int DBstore::InitializeParams(string Op, RGWOpParams *params)
 {
 	int ret = -1;

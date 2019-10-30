@@ -732,9 +732,6 @@ int SQLInsertBucket::Execute(struct RGWOpParams *params)
 
 	ObPtr = new SQLObjectOp(getTenant(), sdb);
 
-	cout<<"Objectmap being inserted for bucket: "<<params->bucket_name;
-	cout<<" and Obptr: "<<ObPtr<<"\n";
-
 	objectmapInsert(params->bucket_name, ObPtr);
 
 	SQL_EXECUTE(params, stmt, NULL);
@@ -781,6 +778,9 @@ out:
 int SQLRemoveBucket::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
+	class SQLObjectOp *ObPtr = NULL;
+
+	objectmapDelete(params->bucket_name);
 
 	SQL_EXECUTE(params, stmt, NULL);
 out:
