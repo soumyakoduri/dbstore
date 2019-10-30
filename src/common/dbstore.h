@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <fmt/format.h>
+#include <map>
 
 using namespace std;
 class DBstore;
@@ -111,6 +112,23 @@ class RGWOp {
 
 	virtual int Prepare(RGWOpParams *params) { return 0; }
 	virtual int Execute(RGWOpParams *params) { return 0; }
+};
+
+class ObjectOp {
+        public:
+        ObjectOp() {};
+
+        virtual ~ObjectOp() {}
+
+        class InsertObjectOp *InsertObject;
+        class RemoveObjectOp *RemoveObject;
+        class ListObjectOp *ListObject;
+        class PutObjectDataOp *PutObjectData;
+        class GetObjectDataOp *GetObjectData;
+        class DeleteObjectDataOp *DeleteObjectData;
+
+	virtual int InitializeObjectOps() { return 0; }
+	virtual int FreeObjectOps() { return 0; }
 };
 
 class InsertUserOp : public RGWOp {
@@ -254,6 +272,7 @@ class DBstore {
 	const string object_table; // XXX: Make it per bucket but then it shall not
 				   // be straightforward to save prepared statement.
 	const string objectdata_table; // XXX: Make it per bucket
+	static map<string, class ObjectOp*> objectmap;
 
 	public:	
 	DBstore(string tenant_name) : tenant(tenant_name),
@@ -262,9 +281,7 @@ class DBstore {
 				object_table(tenant_name+".object.table"),
 				objectdata_table(tenant_name+".objectdata.table")
        			        {}
-	virtual	~DBstore() {
-		FreeRGWOps();
-	}
+	virtual	~DBstore() {}
 
 	string getDBname();
 	string getTenant();
@@ -272,13 +289,16 @@ class DBstore {
 	string getBucketTable();
 	string getObjectTable();
 	string getObjectDataTable();
+	map<string, class ObjectOp*> getObjectMap();
 
 	struct RGWOps rgwops; // RGW operations, make it private?
 	void *db; // Backend database handle, make it private?
 
 	int InitializeParams(string Op, RGWOpParams *params);
 	int ProcessOp(string Op, RGWOpParams *params);
-	RGWOp* getRGWOp(string Op);
+	RGWOp* getRGWOp(string Op, struct RGWOpParams *params);
+	int objectmapInsert(string bucket, void *ptr);
+	int objectmapDelete(string bucket);
 
         virtual void *openDB() { return NULL; }
         virtual int closeDB() { return 0; }

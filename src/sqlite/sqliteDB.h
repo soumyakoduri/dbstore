@@ -28,9 +28,8 @@ class SQLiteDB : public DBstore, public RGWOp{
 	SQLiteDB(string tenant_name, sqlite3 *dbi) : DBstore(tenant_name), db(dbi) {
 		InitPrepareParams(&PrepareParams);
 	}
-	~SQLiteDB() {
-		FreeRGWOps();
-	}
+	~SQLiteDB() {}
+
 	int exec(const char *schema,
 		 int (*callback)(void*,int,char**,char**));
 	void *openDB();
@@ -54,6 +53,20 @@ class SQLiteDB : public DBstore, public RGWOp{
 	int ListAllBuckets(RGWOpParams *params);
 	int ListAllUsers(RGWOpParams *params);
 	int ListAllObjects(RGWOpParams *params);
+};
+
+class SQLObjectOp : public ObjectOp {
+	private:
+		string tenant;
+		sqlite3 **sdb = NULL;
+
+	public:
+		SQLObjectOp(string tenant_name, sqlite3 **sdbi) :
+       			tenant(tenant_name), sdb(sdbi) {};
+		~SQLObjectOp() {}
+
+		int InitializeObjectOps();
+		int FreeObjectOps();
 };
 
 class SQLInsertUser : public SQLiteDB, public InsertUserOp {
@@ -166,6 +179,9 @@ class SQLInsertObject : public SQLiteDB, public InsertObjectOp {
 	public:
 	SQLInsertObject(string tenant_name, class DBstore *dbi) :
 	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+	SQLInsertObject(string tenant_name, sqlite3 **sdbi) :
+		SQLiteDB(tenant_name, *sdbi), sdb(sdbi) {}
+
 	~SQLInsertObject() {
 		if (stmt)
 			sqlite3_finalize(stmt);
@@ -183,6 +199,9 @@ class SQLRemoveObject : public SQLiteDB, public RemoveObjectOp {
 	public:
 	SQLRemoveObject(string tenant_name, class DBstore *dbi) :
 	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+	SQLRemoveObject(string tenant_name, sqlite3 **sdbi) :
+		SQLiteDB(tenant_name, *sdbi), sdb(sdbi) {}
+
 	~SQLRemoveObject() {
 		if (stmt)
 			sqlite3_finalize(stmt);
@@ -200,6 +219,9 @@ class SQLListObject : public SQLiteDB, public ListObjectOp {
 	public:
 	SQLListObject(string tenant_name, class DBstore *dbi) :
 	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+	SQLListObject(string tenant_name, sqlite3 **sdbi) :
+		SQLiteDB(tenant_name, *sdbi), sdb(sdbi) {}
+
 	~SQLListObject() {
 		if (stmt)
 			sqlite3_finalize(stmt);
@@ -217,6 +239,9 @@ class SQLPutObjectData : public SQLiteDB, public PutObjectDataOp {
 	public:
 	SQLPutObjectData(string tenant_name, class DBstore *dbi) :
 	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+	SQLPutObjectData(string tenant_name, sqlite3 **sdbi) :
+		SQLiteDB(tenant_name, *sdbi), sdb(sdbi) {}
+
 	~SQLPutObjectData() {
 		if (stmt)
 			sqlite3_finalize(stmt);
@@ -234,6 +259,9 @@ class SQLGetObjectData : public SQLiteDB, public GetObjectDataOp {
 	public:
 	SQLGetObjectData(string tenant_name, class DBstore *dbi) :
 	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+	SQLGetObjectData(string tenant_name, sqlite3 **sdbi) :
+		SQLiteDB(tenant_name, *sdbi), sdb(sdbi) {}
+
 	~SQLGetObjectData() {
 		if (stmt)
 			sqlite3_finalize(stmt);
@@ -251,6 +279,9 @@ class SQLDeleteObjectData : public SQLiteDB, public DeleteObjectDataOp {
 	public:
 	SQLDeleteObjectData(string tenant_name, class DBstore *dbi) :
 	       	SQLiteDB(tenant_name, (sqlite3 *)dbi->db), sdb((sqlite3 **)&(dbi->db)) {}
+	SQLDeleteObjectData(string tenant_name, sqlite3 **sdbi) :
+		SQLiteDB(tenant_name, *sdbi), sdb(sdbi) {}
+
 	~SQLDeleteObjectData() {
 		if (stmt)
 			sqlite3_finalize(stmt);

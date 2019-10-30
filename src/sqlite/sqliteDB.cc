@@ -500,16 +500,58 @@ int SQLiteDB::ListAllObjects(RGWOpParams *params)
 {
 	int ret = -1;
 	string schema;
+        map<string, class ObjectOp*>::iterator iter;
+        map<string, class ObjectOp*> objectmap;
+	string bucket, tenant;
 
-	schema = ListTableSchema(params->object_table);
+	tenant = getTenant();
 	cout<<"########### Listing all Objects #############\n";
 
-	ret = exec(schema.c_str(), &list_callback);
-	if (ret)
-		cout<<"ListObjecttable failed \n";
+	objectmap = getObjectMap();
+
+	if (objectmap.empty())
+		cout<<"objectmap empty \n";
+
+	for (iter = objectmap.begin(); iter != objectmap.end(); ++iter) {
+		bucket = iter->first;
+		cout<<"bucket name: "<<bucket<<endl;
+		params->object_table = tenant + "." + bucket +
+					".object.table";
+		schema = ListTableSchema(params->object_table);
+
+		ret = exec(schema.c_str(), &list_callback);
+		if (ret)
+			cout<<"ListObjecttable failed \n";
+	}
 
 out:
 	return ret;
+}
+
+int SQLObjectOp::InitializeObjectOps()
+{
+	cout<<"In InitializeObjectOps \n";
+
+        InsertObject = new SQLInsertObject(tenant, sdb);
+	RemoveObject = new SQLRemoveObject(tenant, sdb);
+	ListObject = new SQLListObject(tenant, sdb);
+	PutObjectData = new SQLPutObjectData(tenant, sdb);
+	GetObjectData = new SQLGetObjectData(tenant, sdb);
+	DeleteObjectData = new SQLDeleteObjectData(tenant, sdb);
+
+	return 0;
+}
+
+int SQLObjectOp::FreeObjectOps()
+{
+	delete InsertObject;
+	delete RemoveObject;
+	delete ListObject;
+	delete PutObjectData;
+	delete GetObjectData;
+	delete DeleteObjectData;
+
+	return 0;
 }
 
 int SQLInsertUser::Prepare(struct RGWOpParams *params)
@@ -686,6 +728,14 @@ out:
 int SQLInsertBucket::Execute(struct RGWOpParams *params)
 {
 	int ret = -1;
+	class SQLObjectOp *ObPtr = NULL;
+
+	ObPtr = new SQLObjectOp(getTenant(), sdb);
+
+	cout<<"Objectmap being inserted for bucket: "<<params->bucket_name;
+	cout<<" and Obptr: "<<ObPtr<<"\n";
+
+	objectmapInsert(params->bucket_name, ObPtr);
 
 	SQL_EXECUTE(params, stmt, NULL);
 out:
@@ -787,6 +837,8 @@ int SQLInsertObject::Prepare(struct RGWOpParams *params)
 	int ret = -1;
 	struct RGWOpPrepareParams p_params = PrepareParams;
 	struct SchemaParams s_params = {};
+	string tenant_name = getTenant();
+	struct RGWOpParams copy = *params;
 
 	if (!*sdb) {
 		printf("In SQLInsertObject - no db\n");
@@ -796,7 +848,12 @@ int SQLInsertObject::Prepare(struct RGWOpParams *params)
 	s_params.is_prepare = true;
 	s_params.u.p_params = &p_params;
 
-	p_params.object_table = params->object_table;
+	p_params.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+	copy.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+
+	(void)createObjectTable(&copy);
 
 	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareInsertObject");
 
@@ -836,6 +893,8 @@ int SQLRemoveObject::Prepare(struct RGWOpParams *params)
 	int ret = -1;
 	struct RGWOpPrepareParams p_params = PrepareParams;
 	struct SchemaParams s_params = {};
+	string tenant_name = getTenant();
+	struct RGWOpParams copy = *params;
 
 	if (!*sdb) {
 		printf("In SQLRemoveObject - no db\n");
@@ -845,7 +904,12 @@ int SQLRemoveObject::Prepare(struct RGWOpParams *params)
 	s_params.is_prepare = true;
 	s_params.u.p_params = &p_params;
 
-	p_params.object_table = params->object_table;
+	p_params.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+	copy.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+
+	(void)createObjectTable(&copy);
 
 	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareRemoveObject");
 
@@ -885,6 +949,8 @@ int SQLListObject::Prepare(struct RGWOpParams *params)
 	int ret = -1;
 	struct RGWOpPrepareParams p_params = PrepareParams;
 	struct SchemaParams s_params = {};
+	string tenant_name = getTenant();
+	struct RGWOpParams copy = *params;
 
 	if (!*sdb) {
 		printf("In SQLListObject - no db\n");
@@ -894,7 +960,13 @@ int SQLListObject::Prepare(struct RGWOpParams *params)
 	s_params.is_prepare = true;
 	s_params.u.p_params = &p_params;
 
-	p_params.object_table = params->object_table;
+	p_params.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+	copy.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+
+	(void)createObjectTable(&copy);
+
 
 	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareListObject");
 
@@ -934,6 +1006,8 @@ int SQLPutObjectData::Prepare(struct RGWOpParams *params)
 	int ret = -1;
 	struct RGWOpPrepareParams p_params = PrepareParams;
 	struct SchemaParams s_params = {};
+	string tenant_name = getTenant();
+	struct RGWOpParams copy = *params;
 
 	if (!*sdb) {
 		printf("In SQLPutObjectData - no db\n");
@@ -943,7 +1017,16 @@ int SQLPutObjectData::Prepare(struct RGWOpParams *params)
 	s_params.is_prepare = true;
 	s_params.u.p_params = &p_params;
 
-	p_params.objectdata_table = params->objectdata_table;
+	p_params.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+	p_params.objectdata_table = tenant_name + "." + params->bucket_name +
+				".objectdata.table";
+	copy.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+	copy.objectdata_table = tenant_name + "." + params->bucket_name +
+				".objectdata.table";
+
+	(void)createObjectDataTable(&copy);
 
 	SQL_PREPARE(s_params, sdb, stmt, ret, "PreparePutObjectData");
 
@@ -995,6 +1078,8 @@ int SQLGetObjectData::Prepare(struct RGWOpParams *params)
 	int ret = -1;
 	struct RGWOpPrepareParams p_params = PrepareParams;
 	struct SchemaParams s_params = {};
+	string tenant_name = getTenant();
+	struct RGWOpParams copy = *params;
 
 	if (!*sdb) {
 		printf("In SQLGetObjectData - no db\n");
@@ -1004,7 +1089,16 @@ int SQLGetObjectData::Prepare(struct RGWOpParams *params)
 	s_params.is_prepare = true;
 	s_params.u.p_params = &p_params;
 
-	p_params.objectdata_table = params->objectdata_table;
+	p_params.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+	p_params.objectdata_table = tenant_name + "." + params->bucket_name +
+				".objectdata.table";
+	copy.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+	copy.objectdata_table = tenant_name + "." + params->bucket_name +
+				".objectdata.table";
+
+	(void)createObjectDataTable(&copy);
 
 	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareGetObjectData");
 
@@ -1043,7 +1137,8 @@ int SQLDeleteObjectData::Prepare(struct RGWOpParams *params)
 	int ret = -1;
 	struct RGWOpPrepareParams p_params = PrepareParams;
 	struct SchemaParams s_params = {};
-
+	string tenant_name = getTenant();
+	struct RGWOpParams copy = *params;
 
 	if (!*sdb) {
 		printf("In SQLDeleteObjectData - no db\n");
@@ -1053,7 +1148,16 @@ int SQLDeleteObjectData::Prepare(struct RGWOpParams *params)
 	s_params.is_prepare = true;
 	s_params.u.p_params = &p_params;
 
-	p_params.objectdata_table = params->objectdata_table;
+	p_params.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+	p_params.objectdata_table = tenant_name + "." + params->bucket_name +
+				".objectdata.table";
+	copy.object_table = tenant_name + "." + params->bucket_name +
+				".object.table";
+	copy.objectdata_table = tenant_name + "." + params->bucket_name +
+				".objectdata.table";
+
+	(void)createObjectDataTable(&copy);
 
 	SQL_PREPARE(s_params, sdb, stmt, ret, "PrepareDeleteObjectData");
 
