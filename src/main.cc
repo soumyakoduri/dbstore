@@ -111,6 +111,7 @@ int main(int argc, char *argv[])
 
 	db->closeDB();
 
+	db->FreeRGWOps();
 	delete db;
 
 	return 0;

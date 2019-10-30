@@ -25,8 +25,14 @@ string DBstore::getObjectTable() {
 	return object_table;
 }
 
+map<string, class ObjectOp*> DBstore::objectmap = {};
+
 string DBstore::getObjectDataTable() {
 	return objectdata_table;
+}
+
+map<string, class ObjectOp*> DBstore::getObjectMap() {
+	return DBstore::objectmap;
 }
 
 string RGWOp::CreateTableSchema(string type, RGWOpParams *params) {
@@ -368,34 +374,72 @@ string DeleteObjectDataOp::Schema(SchemaParams *s_params) {
 		 p->object.c_str());
 }
 
-RGWOp * DBstore::getRGWOp(string Op)
+RGWOp * DBstore::getRGWOp(string Op, struct RGWOpParams *params)
 {
 	if (!Op.compare("InsertUser"))
 		return rgwops.InsertUser;
-	if (!Op.compare("InsertBucket"))
-		return rgwops.InsertBucket;
-	if (!Op.compare("InsertObject"))
-		return rgwops.InsertObject;
 	if (!Op.compare("RemoveUser"))
 		return rgwops.RemoveUser;
-	if (!Op.compare("RemoveBucket"))
-		return rgwops.RemoveBucket;
-	if (!Op.compare("RemoveObject"))
-		return rgwops.RemoveObject;
 	if (!Op.compare("ListUser"))
 		return rgwops.ListUser;
+	if (!Op.compare("InsertBucket"))
+		return rgwops.InsertBucket;
+	if (!Op.compare("RemoveBucket"))
+		return rgwops.RemoveBucket;
 	if (!Op.compare("ListBucket"))
 		return rgwops.ListBucket;
+
+	/* Object Operations */
+	map<string, class ObjectOp*>::iterator iter;
+	class ObjectOp* Ob;
+
+	iter = DBstore::objectmap.find(params->bucket_name);
+
+	if (iter == DBstore::objectmap.end()) {
+		cout<<"No objectmap found for bucket: "<<params->bucket_name<<"\n";
+		/* not found */
+		return NULL;
+	}
+
+	Ob = iter->second;
+
+	if (!Op.compare("InsertObject"))
+		return Ob->InsertObject;
+	if (!Op.compare("RemoveObject"))
+		return Ob->RemoveObject;
 	if (!Op.compare("ListObject"))
-		return rgwops.ListObject;
+		return Ob->ListObject;
 	if (!Op.compare("PutObjectData"))
-		return rgwops.PutObjectData;
+		return Ob->PutObjectData;
 	if (!Op.compare("GetObjectData"))
-		return rgwops.GetObjectData;
+		return Ob->GetObjectData;
 	if (!Op.compare("DeleteObjectData"))
-		return rgwops.DeleteObjectData;
+		return Ob->DeleteObjectData;
 
 	return NULL;
+}
+
+int DBstore::objectmapInsert(string bucket, void *ptr)
+{
+	map<string, class ObjectOp*>::iterator iter;
+	class ObjectOp *Ob;
+
+	iter = DBstore::objectmap.find(bucket);
+
+	if (iter != DBstore::objectmap.end()) {
+		// entry already exists
+		// return success or replace it or
+		// return error ?
+		// return success for now
+		return 0;
+	}
+
+	Ob = (class ObjectOp*) ptr;
+	Ob->InitializeObjectOps();
+
+	DBstore::objectmap.insert(pair<string, class ObjectOp*>(bucket, Ob));
+
+	return 0;
 }
 
 int DBstore::InitializeParams(string Op, RGWOpParams *params)
@@ -420,14 +464,12 @@ int DBstore::ProcessOp(string Op, struct RGWOpParams *params) {
 	int ret = -1;
 	class RGWOp *rgw_op;
 
-	rgw_op = getRGWOp(Op);
+	rgw_op = getRGWOp(Op, params);
 
 	ret = rgw_op->Execute(params);
 
 	if (ret)
 		cout<<"In Process op Execute failed for fop : "<<Op.c_str()<<" \n";
-//	else
-//		cout<<"In Process op Execute succeeded for fop : "<<Op.c_str()<<" \n";
 
 	return ret;
 }
