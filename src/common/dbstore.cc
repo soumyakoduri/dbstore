@@ -21,15 +21,7 @@ string DBstore::getBucketTable() {
 	return bucket_table;
 }
 
-string DBstore::getObjectTable() {
-	return object_table;
-}
-
 map<string, class ObjectOp*> DBstore::objectmap = {};
-
-string DBstore::getObjectDataTable() {
-	return objectdata_table;
-}
 
 map<string, class ObjectOp*> DBstore::getObjectMap() {
 	return DBstore::objectmap;
@@ -475,8 +467,6 @@ int DBstore::InitializeParams(string Op, RGWOpParams *params)
 	params->tenant = tenant;
 	params->user_table = user_table;
 	params->bucket_table = bucket_table;
-	params->object_table = object_table;
-	params->objectdata_table = objectdata_table;
 
 out:
 	return ret;

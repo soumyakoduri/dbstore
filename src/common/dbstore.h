@@ -63,12 +63,23 @@ struct RGWOps {
 	class InsertBucketOp *InsertBucket;
 	class RemoveBucketOp *RemoveBucket;
 	class ListBucketOp *ListBucket;
-	class InsertObjectOp *InsertObject;
-	class RemoveObjectOp *RemoveObject;
-	class ListObjectOp *ListObject;
-	class PutObjectDataOp *PutObjectData;
-	class GetObjectDataOp *GetObjectData;
-	class DeleteObjectDataOp *DeleteObjectData;
+};
+
+class ObjectOp {
+        public:
+        ObjectOp() {};
+
+        virtual ~ObjectOp() {}
+
+        class InsertObjectOp *InsertObject;
+        class RemoveObjectOp *RemoveObject;
+        class ListObjectOp *ListObject;
+        class PutObjectDataOp *PutObjectData;
+        class GetObjectDataOp *GetObjectData;
+        class DeleteObjectDataOp *DeleteObjectData;
+
+	virtual int InitializeObjectOps() { return 0; }
+	virtual int FreeObjectOps() { return 0; }
 };
 
 class RGWOp {
@@ -112,23 +123,6 @@ class RGWOp {
 
 	virtual int Prepare(RGWOpParams *params) { return 0; }
 	virtual int Execute(RGWOpParams *params) { return 0; }
-};
-
-class ObjectOp {
-        public:
-        ObjectOp() {};
-
-        virtual ~ObjectOp() {}
-
-        class InsertObjectOp *InsertObject;
-        class RemoveObjectOp *RemoveObject;
-        class ListObjectOp *ListObject;
-        class PutObjectDataOp *PutObjectData;
-        class GetObjectDataOp *GetObjectData;
-        class DeleteObjectDataOp *DeleteObjectData;
-
-	virtual int InitializeObjectOps() { return 0; }
-	virtual int FreeObjectOps() { return 0; }
 };
 
 class InsertUserOp : public RGWOp {
@@ -280,17 +274,12 @@ class DBstore {
 	const string tenant;
 	const string user_table;
 	const string bucket_table;
-	const string object_table; // XXX: Make it per bucket but then it shall not
-				   // be straightforward to save prepared statement.
-	const string objectdata_table; // XXX: Make it per bucket
 	static map<string, class ObjectOp*> objectmap;
 
 	public:	
 	DBstore(string tenant_name) : tenant(tenant_name),
        				user_table(tenant_name+".user.table"),
-			        bucket_table(tenant_name+".bucket.table"),
-				object_table(tenant_name+".object.table"),
-				objectdata_table(tenant_name+".objectdata.table")
+			        bucket_table(tenant_name+".bucket.table")
        			        {}
 	virtual	~DBstore() {}
 
@@ -298,8 +287,6 @@ class DBstore {
 	string getTenant();
 	string getUserTable();
 	string getBucketTable();
-	string getObjectTable();
-	string getObjectDataTable();
 	map<string, class ObjectOp*> getObjectMap();
 
 	struct RGWOps rgwops; // RGW operations, make it private?
