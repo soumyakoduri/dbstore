@@ -165,12 +165,6 @@ int SQLiteDB::InitializeRGWOps()
         rgwops.InsertBucket = new SQLInsertBucket(tenant, this);
         rgwops.RemoveBucket = new SQLRemoveBucket(tenant, this);
         rgwops.ListBucket = new SQLListBucket(tenant, this);
-        rgwops.InsertObject = new SQLInsertObject(tenant, this);
-        rgwops.RemoveObject = new SQLRemoveObject(tenant, this);
-        rgwops.ListObject = new SQLListObject(tenant, this);
-        rgwops.PutObjectData = new SQLPutObjectData(tenant, this);
-        rgwops.GetObjectData = new SQLGetObjectData(tenant, this); 
-        rgwops.DeleteObjectData = new SQLDeleteObjectData(tenant, this);
 
 	return 0;
 }
@@ -183,12 +177,6 @@ int SQLiteDB::FreeRGWOps()
         delete rgwops.InsertBucket;
         delete rgwops.RemoveBucket;
         delete rgwops.ListBucket;
-        delete rgwops.InsertObject;
-        delete rgwops.RemoveObject;
-        delete rgwops.ListObject;
-        delete rgwops.PutObjectData;
-        delete rgwops.GetObjectData; 
-        delete rgwops.DeleteObjectData;
 
 	return 0;
 }
@@ -309,24 +297,16 @@ out:
 int SQLiteDB::createTables()
 {
 	int ret = -1;
-	int cu, cb, co, cod = -1;
+	int cu, cb = -1;
 	RGWOpParams params = {};
 
 	params.user_table = getUserTable();
 	params.bucket_table = getBucketTable();
-	params.object_table = getObjectTable();
-	params.objectdata_table = getObjectDataTable();
 
 	if (cu = createUserTable(&params))
 		goto out;
 
 	if (cb = createBucketTable(&params))
-		goto out;
-
-	if (co = createObjectTable(&params))
-		goto out;
-
-	if (cod = createObjectDataTable(&params))
 		goto out;
 
 	ret = 0;
@@ -336,10 +316,6 @@ out:
 			DeleteUserTable(&params);
 		if (cb)
 			DeleteBucketTable(&params);
-		if (co)
-			DeleteObjectTable(&params);
-		if (cod)
-			DeleteObjectDataTable(&params);
 	}
 
 	return ret;
