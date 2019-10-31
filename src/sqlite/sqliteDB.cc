@@ -514,7 +514,6 @@ int SQLiteDB::ListAllObjects(RGWOpParams *params)
 
 	for (iter = objectmap.begin(); iter != objectmap.end(); ++iter) {
 		bucket = iter->first;
-		cout<<"bucket name: "<<bucket<<endl;
 		params->object_table = tenant + "." + bucket +
 					".object.table";
 		schema = ListTableSchema(params->object_table);
@@ -530,8 +529,6 @@ out:
 
 int SQLObjectOp::InitializeObjectOps()
 {
-	cout<<"In InitializeObjectOps \n";
-
         InsertObject = new SQLInsertObject(tenant, sdb);
 	RemoveObject = new SQLRemoveObject(tenant, sdb);
 	ListObject = new SQLListObject(tenant, sdb);

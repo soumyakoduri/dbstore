@@ -133,7 +133,18 @@ class ObjectOp {
 
 class InsertUserOp : public RGWOp {
 	private:
-	const string Query = "INSERT INTO '{}' (UserName) VALUES ({});";
+	/* For existing entires, -
+	 * (1) INSERT or REPLACE - it will delete previous entry and then
+	 * inserts new one. Since it deletes previos enties, it will
+	 * trigger all foriegn key cascade deletes or other triggers.
+	 * (2) INSERT or UPDATE - this will set NULL values to unassigned
+	 * fields.
+	 * more info: https://code-examples.net/en/q/377728
+	 *
+	 * For now using INSERT or REPLACE. If required of updating existing
+	 * record, will use another query.
+	 */
+	const string Query = "INSERT OR REPLACE INTO '{}' (UserName) VALUES ({});";
 
 	public:
 	virtual ~InsertUserOp() {}
@@ -166,7 +177,7 @@ class ListUserOp: public RGWOp {
 class InsertBucketOp: public RGWOp {
 	private:
 	const string Query =
-	"INSERT INTO '{}' (BucketName, UserName) VALUES ({}, {})";
+	"INSERT OR REPLACE INTO '{}' (BucketName, UserName) VALUES ({}, {})";
 
 	public:
 	virtual ~InsertBucketOp() {}
@@ -199,7 +210,7 @@ class ListBucketOp: public RGWOp {
 class InsertObjectOp: public RGWOp {
 	private:
 	const string Query =
-	"INSERT INTO '{}' (BucketName, ObjectName) VALUES ({}, {})";
+	"INSERT OR REPLACE INTO '{}' (BucketName, ObjectName) VALUES ({}, {})";
 
 	public:
 	virtual ~InsertObjectOp() {}
@@ -233,7 +244,7 @@ class ListObjectOp: public RGWOp {
 class PutObjectDataOp: public RGWOp {
 	private:
 	const string Query =
-	"INSERT INTO '{}' (BucketName, ObjectName, Offset, Data, Size) \
+	"INSERT OR REPLACE INTO '{}' (BucketName, ObjectName, Offset, Data, Size) \
        		VALUES ({}, {}, {}, {}, {})";
 
 	public:
